@@ -27,6 +27,11 @@ const AVANTAGES = [
   { icon: Link2, titre: "Compatible avec vos outils", texte: "Synchronisation Airbnb, application installable sur mobile : Escale s'intègre à ce que vous utilisez déjà." },
   { icon: ShieldCheck, titre: "Litiges pris au sérieux", texte: "Un vrai processus de signalement et de médiation, pas une simple boîte mail sans réponse." },
 ];
+const TAMPONS_CONFIANCE = [
+  { icon: Lock, label: "Paiement sécurisé" },
+  { icon: ShieldCheck, label: "Identité vérifiée" },
+  { icon: FileText, label: "Contrat automatique" },
+  { icon: Star, label: "Avis vérifiés" }, ];
 
 const COMPARATIF = [
   { critere: "Frais pour le voyageur", escale: "0 €", agence: "10 à 20% de frais", direct: "0 € mais aucune garantie" },
