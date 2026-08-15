@@ -26,7 +26,7 @@ export async function fetchAndParseIcal(icalUrl: string): Promise<ParsedBlock[]>
 
   const blocks: ParsedBlock[] = [];
 
-  for (const key of Object.keys(data || {})) {
+  for (const key of Object.keys((data as any) || {})) {
     const entry = data[key];
     if (entry.type !== "VEVENT") continue;
     if (!entry.start || !entry.end) continue;
