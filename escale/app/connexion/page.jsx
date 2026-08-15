@@ -116,4 +116,12 @@ function PageConnexionContent() {
       </div>
     </div>
   );
+  
+}export default function PageConnexion() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Chargement...</div>}>
+      <PageConnexionContent />
+    </Suspense>
+  );
 }
+
