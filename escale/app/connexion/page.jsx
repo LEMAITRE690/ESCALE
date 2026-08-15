@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, ArrowRight, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function PageConnexion() {
+function PageConnexionContent() {
   const router = useRouter();
   const params = useSearchParams();
   const suite = params.get("suite") || "/";
