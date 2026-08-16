@@ -20,7 +20,7 @@ const STATS = [
 ];
 
 const AVANTAGES = [
-  { icon: Wallet, titre: "Moins cher qu'une agence", texte: "Aucune commission d'agence classique : juste une commission unique, affichée avant paiement." },
+  { icon: Wallet, titre: "Moins cher qu'une agence", texte: "Aucune commission d'agence classique : 6% sur les réservations confirmées, ou 2% pour les hôtes abonnés, affichés avant paiement." },
   { icon: ShieldCheck, titre: "Paiement protégé", texte: "Les fonds du voyageur sont retenus jusqu'à la fin du séjour, dans l'intérêt des deux parties." },
   { icon: MessageCircle, titre: "Contact direct", texte: "Vous échangez directement avec l'hôte ou le voyageur, sans intermédiaire qui filtre la conversation." },
   { icon: PawPrint, titre: "Annonces personnalisables", texte: "Chaque hôte définit ses propres règles : animaux, horaires, annulation, caution — rien d'imposé par la plateforme." },
@@ -54,7 +54,7 @@ const TEMOIGNAGES = [
 ];
 
 const FAQ = [
-  { q: "Escale prend-elle une commission ?", r: "Oui, une commission est prélevée sur chaque réservation confirmée. Elle est toujours affichée avant le paiement, sans frais caché supplémentaire." },
+  { q: "Escale prend-elle une commission ?", r: "Oui, sur chaque réservation confirmée : 6% sans abonnement, ou 2% avec l'abonnement à 25 €/mois. La commission est toujours affichée avant le paiement, sans frais caché supplémentaire." },
   { q: "Quand l'hôte est-il payé ?", r: "Le lendemain de la fin du séjour, et seulement si aucun signalement n'est en cours sur la réservation." },
   { q: "Que se passe-t-il en cas de litige ?", r: "Le voyageur ou l'hôte peut signaler un problème avant le reversement des fonds. Notre équipe instruit la situation et décide de libérer les fonds, rembourser le voyageur, ou clore le signalement." },
   { q: "Dois-je souscrire une assurance en tant qu'hôte ?", r: "Cela dépend de votre statut (résidence principale louée occasionnellement ou bien dédié à la location). Nous vous guidons sur ce point lors de la publication de votre annonce." },
@@ -127,9 +127,13 @@ export default function PagePresentation() {
             <a href="#comment-ca-marche" onClick={() => setMenuOuvert(false)}>Comment ça marche</a>
             <a href="#fonctionnalites" onClick={() => setMenuOuvert(false)}>Fonctionnalités</a>
             <a href="#confiance" onClick={() => setMenuOuvert(false)}>Sécurité & confiance</a>
-            <button className="mt-2 px-4 py-2 rounded-lg bg-[#1B3A3A] text-[#F8F4EC] font-medium text-left">
+            <Link
+              href="/hote"
+              onClick={() => setMenuOuvert(false)}
+              className="mt-2 px-4 py-2 rounded-lg bg-[#1B3A3A] text-[#F8F4EC] font-medium text-left"
+            >
               Publier une annonce
-            </button>
+            </Link>
           </div>
         )}
       </header>
@@ -149,12 +153,12 @@ export default function PagePresentation() {
               qui protège les deux parties — sans frais cachés, sans agence.
             </p>
             <div className="flex flex-wrap gap-3 mb-8">
-              <button className="flex items-center gap-1.5 px-5 py-3 rounded-lg bg-[#1B3A3A] text-[#F8F4EC] text-sm font-medium hover:bg-[#2F6E6E] transition-colors">
+              <Link href="/recherche" className="flex items-center gap-1.5 px-5 py-3 rounded-lg bg-[#1B3A3A] text-[#F8F4EC] text-sm font-medium hover:bg-[#2F6E6E] transition-colors">
                 Trouver un logement <ArrowRight size={15} />
-              </button>
-              <button className="flex items-center gap-1.5 px-5 py-3 rounded-lg border border-[#D8CCB0] text-[#1B3A3A] text-sm font-medium hover:bg-[#F1EADB] transition-colors">
+              </Link>
+              <Link href="/hote" className="flex items-center gap-1.5 px-5 py-3 rounded-lg border border-[#D8CCB0] text-[#1B3A3A] text-sm font-medium hover:bg-[#F1EADB] transition-colors">
                 Devenir hôte
-              </button>
+              </Link>
             </div>
             <div className="flex flex-wrap gap-4">
               {TAMPONS_CONFIANCE.map(({ icon: Icon, label }, i) => (
@@ -295,9 +299,9 @@ export default function PagePresentation() {
       <section className="max-w-6xl mx-auto px-5 pb-16 md:pb-20">
         <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
           <h2 className="font-serif text-2xl md:text-3xl">Quelques escales du moment</h2>
-          <button className="flex items-center gap-1 text-sm text-[#2F6E6E] hover:text-[#1B3A3A] transition-colors font-medium">
+          <Link href="/recherche" className="flex items-center gap-1 text-sm text-[#2F6E6E] hover:text-[#1B3A3A] transition-colors font-medium">
             Voir tous les logements <ArrowRight size={14} />
-          </button>
+          </Link>
         </div>
         <div className="grid sm:grid-cols-3 gap-5">
           {LOGEMENTS_APERCU.map((l) => (
@@ -375,9 +379,9 @@ export default function PagePresentation() {
               Notre statut d'intermédiaire, la gestion des litiges et le fonctionnement des
               paiements sont détaillés noir sur blanc dans nos conditions générales.
             </p>
-            <button className="flex items-center gap-1.5 text-sm font-medium text-[#C97B3D] hover:text-[#F8F4EC] transition-colors">
+            <Link href="/cgu" className="flex items-center gap-1.5 text-sm font-medium text-[#C97B3D] hover:text-[#F8F4EC] transition-colors">
               Lire les CGU <ArrowRight size={14} />
-            </button>
+            </Link>
           </div>
         </div>
       </section>
@@ -391,23 +395,69 @@ export default function PagePresentation() {
             </span>
             <h2 className="font-serif text-2xl md:text-3xl mb-3">Une commission, aucune surprise</h2>
             <p className="text-sm text-[#6B5B4D]">
-              Escale se rémunère uniquement via une commission sur les réservations confirmées.
-              Publier une annonce et parcourir les logements reste entièrement gratuit.
+              Les hôtes choisissent entre une commission simple et un abonnement à commission
+              réduite. Publier une annonce et parcourir les logements reste entièrement gratuit.
             </p>
           </div>
-          <div className="grid sm:grid-cols-2 gap-5 max-w-2xl">
+          <div className="grid sm:grid-cols-3 gap-5 max-w-4xl">
             <div className="border border-[#E4DCC8] rounded-xl p-5">
               <p className="text-xs uppercase tracking-wide text-[#8C7A66] mb-2">Voyageurs</p>
               <p className="font-serif text-2xl text-[#1B3A3A] mb-1">0 €</p>
               <p className="text-xs text-[#6B5B4D]">Aucun frais de réservation. Le prix affiché est le prix payé.</p>
             </div>
+            <div className="border border-[#E4DCC8] rounded-xl p-5">
+              <p className="text-xs uppercase tracking-wide text-[#8C7A66] mb-2">Hôtes · sans abonnement</p>
+              <p className="font-serif text-2xl text-[#1B3A3A] mb-1">6%</p>
+              <p className="text-xs text-[#6B5B4D]">Prélevés uniquement sur les réservations confirmées, jamais sur la publication.</p>
+            </div>
             <div className="border-2 border-[#2F6E6E] rounded-xl p-5 relative">
               <span className="absolute -top-2.5 left-5 bg-[#2F6E6E] text-[#F8F4EC] text-[10px] px-2 py-0.5 rounded-full font-medium">
-                Hôtes
+                Hôtes réguliers
               </span>
-              <p className="text-xs uppercase tracking-wide text-[#8C7A66] mb-2 mt-1">Commission</p>
-              <p className="font-serif text-2xl text-[#1B3A3A] mb-1">12%</p>
-              <p className="text-xs text-[#6B5B4D]">Prélevée uniquement sur les réservations confirmées, jamais sur la publication.</p>
+              <p className="text-xs uppercase tracking-wide text-[#8C7A66] mb-2 mt-1">Hôtes · avec abonnement</p>
+              <p className="font-serif text-2xl text-[#1B3A3A] mb-1">
+                25 €<span className="text-base text-[#6B5B4D]">/mois</span> + 2%
+              </p>
+              <p className="text-xs text-[#6B5B4D]">Trois fois moins de commission sur chaque réservation : 2% au lieu de 6%.</p>
+            </div>
+          </div>
+
+          <div className="max-w-4xl mt-5 border border-[#E4DCC8] bg-[#F1EADB] rounded-xl p-5">
+            <p className="text-sm text-[#1B3A3A] font-medium mb-2">
+              À partir de 625 € de réservations par mois, l'abonnement coûte moins cher.
+            </p>
+            <p className="text-sm text-[#6B5B4D] leading-relaxed mb-4">
+              Plus vous louez, plus l'écart se creuse : la commission de 6% grimpe avec vos
+              revenus, l'abonnement non. C'est la formule pensée pour les hôtes qui louent
+              toute l'année.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="text-left text-[#8C7A66]">
+                    <th className="border-b border-[#D8CCB0] py-2 pr-4 font-medium">Réservations / mois</th>
+                    <th className="border-b border-[#D8CCB0] py-2 pr-4 font-medium">Sans abonnement (6%)</th>
+                    <th className="border-b border-[#D8CCB0] py-2 pr-4 font-medium">Avec abonnement</th>
+                    <th className="border-b border-[#D8CCB0] py-2 font-medium">Économie / an</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { ca: 625, sans: 38, avec: 38, gain: 0 },
+                    { ca: 1500, sans: 90, avec: 55, gain: 420 },
+                    { ca: 3000, sans: 180, avec: 85, gain: 1140 },
+                  ].map((l) => (
+                    <tr key={l.ca}>
+                      <td className="border-b border-[#E4DCC8] py-2.5 pr-4 text-[#1B3A3A]">{l.ca} €</td>
+                      <td className="border-b border-[#E4DCC8] py-2.5 pr-4 text-[#6B5B4D]">{l.sans} €</td>
+                      <td className="border-b border-[#E4DCC8] py-2.5 pr-4 text-[#6B5B4D]">{l.avec} €</td>
+                      <td className="border-b border-[#E4DCC8] py-2.5 font-medium text-[#2F6E6E]">
+                        {l.gain === 0 ? "—" : `${l.gain} €`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -432,7 +482,7 @@ export default function PagePresentation() {
       </section>
 
       {/* FAQ */}
-      <section className="bg-[#FFFDF8] border-y border-[#E4DCC8]">
+      <section id="faq" className="bg-[#FFFDF8] border-y border-[#E4DCC8]">
         <div className="max-w-3xl mx-auto px-5 py-16 md:py-20">
           <h2 className="font-serif text-2xl md:text-3xl mb-8">Questions fréquentes</h2>
           <div className="space-y-2">
@@ -465,12 +515,12 @@ export default function PagePresentation() {
             Que vous cherchiez un logement ou souhaitiez accueillir des voyageurs, tout commence ici.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
-            <button className="flex items-center gap-1.5 px-5 py-3 rounded-lg bg-[#1B3A3A] text-[#F8F4EC] text-sm font-medium hover:bg-[#2F6E6E] transition-colors">
+            <Link href="/recherche" className="flex items-center gap-1.5 px-5 py-3 rounded-lg bg-[#1B3A3A] text-[#F8F4EC] text-sm font-medium hover:bg-[#2F6E6E] transition-colors">
               Trouver un logement <ArrowRight size={15} />
-            </button>
-            <button className="flex items-center gap-1.5 px-5 py-3 rounded-lg border border-[#D8CCB0] text-[#1B3A3A] text-sm font-medium hover:bg-[#FFFDF8] transition-colors">
+            </Link>
+            <Link href="/hote" className="flex items-center gap-1.5 px-5 py-3 rounded-lg border border-[#D8CCB0] text-[#1B3A3A] text-sm font-medium hover:bg-[#FFFDF8] transition-colors">
               <Home size={15} /> Devenir hôte
-            </button>
+            </Link>
           </div>
         </div>
       </section>
@@ -485,9 +535,9 @@ export default function PagePresentation() {
             <span className="font-serif text-sm text-[#1B3A3A]">Escale</span>
           </div>
           <div className="flex flex-wrap items-center gap-5 text-xs text-[#8C7A66]">
-            <a href="#" className="hover:text-[#1B3A3A] transition-colors">Conditions générales</a>
-            <a href="#" className="hover:text-[#1B3A3A] transition-colors">Confidentialité</a>
-            <a href="#" className="hover:text-[#1B3A3A] transition-colors">Contact</a>
+            <Link href="/cgu" className="hover:text-[#1B3A3A] transition-colors">Conditions générales</Link>
+            <Link href="/confidentialite" className="hover:text-[#1B3A3A] transition-colors">Confidentialité</Link>
+            <Link href="/contact" className="hover:text-[#1B3A3A] transition-colors">Contact</Link>
           </div>
         </div>
       </footer>
