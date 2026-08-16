@@ -3,6 +3,7 @@
 // nécessaires pour que le navigateur propose "Installer Escale" (iOS,
 // Android, desktop) et affiche la bonne icône/couleur au lancement.
 
+import "./globals.css";
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
