@@ -4,13 +4,8 @@
 // Storage "listing-photos", puis crée l'annonce en base avec les URLs.
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 import { createClient as createServerAuthClient } from "@/lib/supabase/server";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function POST(req: NextRequest) {
   // L'hôte est déterminé par la session authentifiée, jamais par un champ

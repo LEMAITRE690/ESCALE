@@ -2,13 +2,8 @@
 // PATCH /api/admin/documents/:id — valide ou refuse le document
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createClient as createServerAuthClient } from "@/lib/supabase/server";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 async function verifierAdmin() {
   const authClient = createServerAuthClient();

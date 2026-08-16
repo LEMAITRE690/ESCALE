@@ -5,13 +5,10 @@
 // comme "blocages externes" dans Escale pour empêcher toute double réservation.
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+// Le client service role est nécessaire ici : seule cette route écrit dans
+// external_calendar_blocks.
+import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 import { fetchAndParseIcal } from "@/lib/ical/parse";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // seule cette route écrit dans external_calendar_blocks
-);
 
 export async function GET(req: NextRequest) {
   // Vercel Cron envoie un header d'authentification interne à vérifier.
