@@ -1,13 +1,21 @@
 "use client";
 
 import React, { useState } from "react";
-import { Home, Users, Wallet, Clock, Copy, Check, MapPin, ShieldCheck, ArrowRight } from "lucide-react";
+import { Home, Users, Wallet, Clock, Copy, Check, MapPin, ShieldCheck, ArrowRight, Download } from "lucide-react";
 
 function fmtEUR(centimes) {
   return ((centimes ?? 0) / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
 }
 function fmtDate(d) {
   return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+}
+function fmtMois(d) {
+  return new Date(d).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+}
+// Montant brut en euros, sans symbole ni séparateur de milliers : destiné à
+// être recopié dans un logiciel de facturation, pas à être lu.
+function montantBrut(centimes) {
+  return ((centimes ?? 0) / 100).toFixed(2).replace(".", ",");
 }
 
 function MetricCard({ icon: Icon, label, value, sub }) {
@@ -23,8 +31,42 @@ function MetricCard({ icon: Icon, label, value, sub }) {
   );
 }
 
-export default function PartenaireDashboardClient({ partenaire, octrois, annonces, resume, paiements }) {
+export default function PartenaireDashboardClient({ partenaire, octrois, annonces, resume, paiements, recapMensuel = [] }) {
   const [copie, setCopie] = useState(false);
+
+  // Export CSV du récapitulatif mensuel : la conciergerie établit sa propre
+  // facture de rétrocommission, ce fichier lui sert de justificatif et de
+  // base de saisie comptable.
+  function exporterRecapCSV() {
+    const entetes = [
+      "Mois",
+      "Transactions",
+      "Volume encaisse (EUR)",
+      "Retrocommission (EUR)",
+      "Deja versee (EUR)",
+      "En attente (EUR)",
+    ];
+    const lignes = recapMensuel.map((m) => [
+      fmtMois(m.mois),
+      m.reservation_count,
+      montantBrut(m.volume_transactions),
+      montantBrut(m.retrocommission),
+      montantBrut(m.retrocommission_versee),
+      montantBrut(m.retrocommission_en_attente),
+    ]);
+    // Séparateur point-virgule et BOM : Excel en configuration française
+    // ouvre le fichier directement, sans assistant d'importation.
+    const csv =
+      "﻿" +
+      [entetes, ...lignes].map((l) => l.map((c) => `"${c}"`).join(";")).join("\r\n");
+
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    const lien = document.createElement("a");
+    lien.href = url;
+    lien.download = `escale-recapitulatif-${partenaire.referral_code}.csv`;
+    lien.click();
+    URL.revokeObjectURL(url);
+  }
 
   function copierCode() {
     navigator.clipboard?.writeText(partenaire.referral_code);
@@ -119,6 +161,61 @@ export default function PartenaireDashboardClient({ partenaire, octrois, annonce
               })}
             </div>
           )}
+        </div>
+
+        <div className="bg-[#FFFDF8] border border-[#E4DCC8] rounded-xl overflow-hidden mb-6">
+          <div className="px-4 py-3 border-b border-[#E4DCC8] flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-serif text-[#1B3A3A] text-base">Récapitulatif mensuel</h2>
+              <p className="text-xs text-[#8C7A66] mt-0.5">
+                Escale n'émet pas de facture pour votre rétrocommission : vous l'établissez
+                vous-même, sur la base de ce récapitulatif.
+              </p>
+            </div>
+            {recapMensuel.length > 0 && (
+              <button
+                onClick={exporterRecapCSV}
+                className="flex items-center gap-1.5 shrink-0 px-3 py-2 rounded-lg border border-[#E4DCC8] text-xs font-medium text-[#6B5B4D] hover:bg-[#F1EADB] transition-colors"
+              >
+                <Download size={13} /> Exporter en CSV
+              </button>
+            )}
+          </div>
+          {recapMensuel.length === 0 ? (
+            <p className="text-xs text-[#B0A48F] text-center py-8">
+              Aucune transaction enregistrée pour le moment.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-wide text-[#8C7A66]">
+                    <th className="px-4 py-2 font-medium">Mois</th>
+                    <th className="px-4 py-2 font-medium text-right">Transactions</th>
+                    <th className="px-4 py-2 font-medium text-right">Volume encaissé</th>
+                    <th className="px-4 py-2 font-medium text-right">Rétrocommission</th>
+                    <th className="px-4 py-2 font-medium text-right">Dont en attente</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recapMensuel.map((m) => (
+                    <tr key={m.mois} className="border-t border-[#EDE4D4]">
+                      <td className="px-4 py-2.5 text-[#1B3A3A] capitalize">{fmtMois(m.mois)}</td>
+                      <td className="px-4 py-2.5 text-right text-[#6B5B4D]">{m.reservation_count}</td>
+                      <td className="px-4 py-2.5 text-right text-[#6B5B4D]">{fmtEUR(m.volume_transactions)}</td>
+                      <td className="px-4 py-2.5 text-right text-[#1B3A3A] font-medium">{fmtEUR(m.retrocommission)}</td>
+                      <td className="px-4 py-2.5 text-right text-[#8C7A66]">{fmtEUR(m.retrocommission_en_attente)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="px-4 py-3 border-t border-[#E4DCC8] text-xs text-[#8C7A66] leading-relaxed">
+            Les montants indiqués sont ceux effectivement versés par Escale. Il vous
+            appartient de déterminer le traitement de TVA applicable à votre situation
+            lors de l'établissement de votre facture.
+          </p>
         </div>
 
         <div className="bg-[#FFFDF8] border border-[#E4DCC8] rounded-xl overflow-hidden">

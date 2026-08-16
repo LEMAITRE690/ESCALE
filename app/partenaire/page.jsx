@@ -62,6 +62,16 @@ export default async function PagePartenaire() {
     .order("created_at", { ascending: false })
     .limit(20);
 
+  // Récapitulatif mensuel : la conciergerie établit elle-même sa facture de
+  // rétrocommission, Escale lui fournit la base de calcul (migration 0028).
+  // Deux ans d'historique, largement au-delà de l'exercice comptable courant.
+  const { data: recapMensuel } = await supabase
+    .from("partner_monthly_summary")
+    .select("*")
+    .eq("partner_id", partenaire.id)
+    .order("mois", { ascending: false })
+    .limit(24);
+
   return (
     <PartenaireDashboardClient
       partenaire={partenaire}
@@ -69,6 +79,7 @@ export default async function PagePartenaire() {
       annonces={annonces ?? []}
       resume={resume ?? { reservation_count: 0, total_earned: 0, total_transferred: 0, total_pending: 0 }}
       paiements={paiements ?? []}
+      recapMensuel={recapMensuel ?? []}
     />
   );
 }
