@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import RevenusHote from "@/components/RevenusHote";
 import ChoixFormule from "@/components/ChoixFormule";
+import FichesConciergeries from "@/components/admin/FichesConciergeries";
 
 // ---------------------------------------------------------------------------
 // Données de démonstration
@@ -3336,6 +3337,8 @@ function BackOfficeAdmin() {
       </div>
 
       <GraphiqueRevenus data={revenusPlateforme} titre="Commission plateforme — 6 derniers mois" />
+
+      <FichesConciergeries />
 
       <DocumentsAVerifier />
 
