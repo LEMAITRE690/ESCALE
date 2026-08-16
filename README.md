@@ -255,13 +255,18 @@ réservées à l'hôte principal, elles ne les remplacent pas.
 - `supabase/migrations/0017_partenaires_conciergeries.sql` — crée la table `partners`
   (conciergeries), ajoute `profiles.referred_by_partner_id` et les colonnes de traçabilité
   correspondantes sur `payments`.
-- **La commission réelle est désormais fixée à 6%** dans `lib/stripe/client.ts`
-  (`PLATFORM_FEE_RATE`), conformément à la formule "Commission" définie pour la tarification
-  hôtes. La formule "Abonnement" (25 €/mois + 2%) reste pour l'instant une maquette marketing
-  non branchée dans le code de paiement.
-- Si l'hôte a été apporté par un partenaire, `computeFees()` retire 1 point des 6% au profit
-  du partenaire (Escale conserve alors 5%) — **le montant reversé à l'hôte ne change jamais**,
-  avec ou sans partenaire.
+- **Tous les taux sont définis dans `lib/pricing.json`**, exposés typés par `lib/pricing.ts`
+  et consommés partout ailleurs — code de paiement, page d'accueil, CGU en ligne et
+  générateur du PDF des CGU. Aucun taux ne doit être réécrit en dur.
+- La formule "Commission" est fixée à **8,5 % TTC** du montant du séjour, taxe de séjour
+  exclue de l'assiette. La formule "Abonnement" (19 €/mois TTC + 5 % TTC) reste pour
+  l'instant une maquette marketing non branchée dans le code de paiement : tous les hôtes
+  relèvent de la formule Commission.
+- Si l'hôte a été apporté par un partenaire, `computeFees()` retire 1 point au profit du
+  partenaire (Escale conserve alors 7,5 %) — **le montant reversé à l'hôte ne change
+  jamais**, avec ou sans partenaire.
+- Les commentaires des migrations `0017` mentionnent encore l'ancienne grille à 6 % : ces
+  fichiers ont déjà été appliqués en base et n'ont volontairement pas été réécrits.
 - `POST /api/partners` — crée un partenaire et génère son code de parrainage (réservé aux
   administrateurs ; ce n'est pas une inscription libre).
 - `POST /api/partners/onboard` — onboarding Stripe Connect du partenaire, sur le même

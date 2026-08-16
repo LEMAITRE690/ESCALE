@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
-import { stripe, computeFees } from "@/lib/stripe/client";
+import { stripe } from "@/lib/stripe/client";
 
 export async function POST(req: NextRequest) {
   const { reservationId } = await req.json();

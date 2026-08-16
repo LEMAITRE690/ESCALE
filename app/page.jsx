@@ -7,6 +7,32 @@ import {
   ArrowRight, Check, PawPrint, Home, Users, Star, Menu, X,
   Compass, Sparkles, FileText, Lock, ChevronDown, MapPin, Percent,
 } from "lucide-react";
+import {
+  COMMISSION_RATE_TTC,
+  SUBSCRIPTION_FEE_TTC,
+  SUBSCRIPTION_RATE_TTC,
+  formatTaux,
+  formatEuros,
+} from "@/lib/pricing";
+
+// Montant de réservations mensuel à partir duquel l'abonnement devient plus
+// avantageux : la part fixe est amortie par l'écart entre les deux taux.
+const SEUIL_ABONNEMENT = Math.ceil(
+  SUBSCRIPTION_FEE_TTC / (COMMISSION_RATE_TTC - SUBSCRIPTION_RATE_TTC)
+);
+
+// Exemples chiffrés dérivés des taux, jamais saisis en dur : une évolution de
+// la grille met le tableau à jour sans risque d'incohérence.
+const EXEMPLES_TARIFS = [1000, 2000, 3000].map((ca) => {
+  const sans = ca * COMMISSION_RATE_TTC;
+  const avec = SUBSCRIPTION_FEE_TTC + ca * SUBSCRIPTION_RATE_TTC;
+  return {
+    ca,
+    sans: Math.round(sans),
+    avec: Math.round(avec),
+    gain: Math.round((sans - avec) * 12),
+  };
+});
 
 // ---------------------------------------------------------------------------
 // Données
@@ -20,7 +46,7 @@ const STATS = [
 ];
 
 const AVANTAGES = [
-  { icon: Wallet, titre: "Moins cher qu'une agence", texte: "Aucune commission d'agence classique : 6% sur les réservations confirmées, ou 2% pour les hôtes abonnés, affichés avant paiement." },
+  { icon: Wallet, titre: "Une commission contenue", texte: `${formatTaux(COMMISSION_RATE_TTC)} TTC sur les réservations confirmées, ou ${formatTaux(SUBSCRIPTION_RATE_TTC)} pour les hôtes abonnés — affichés avant paiement, sans frais pour le voyageur.` },
   { icon: ShieldCheck, titre: "Paiement protégé", texte: "Les fonds du voyageur sont retenus jusqu'à la fin du séjour, dans l'intérêt des deux parties." },
   { icon: MessageCircle, titre: "Contact direct", texte: "Vous échangez directement avec l'hôte ou le voyageur, sans intermédiaire qui filtre la conversation." },
   { icon: PawPrint, titre: "Annonces personnalisables", texte: "Chaque hôte définit ses propres règles : animaux, horaires, annulation, caution — rien d'imposé par la plateforme." },
@@ -34,11 +60,12 @@ const TAMPONS_CONFIANCE = [
   { icon: Star, label: "Avis vérifiés" }, ];
 
 const COMPARATIF = [
-  { critere: "Frais pour le voyageur", escale: "0 €", agence: "10 à 20% de frais", direct: "0 € mais aucune garantie" },
-  { critere: "Paiement sécurisé", escale: "Oui, retenu jusqu'à la fin du séjour", agence: "Oui, souvent en plusieurs fois", direct: "À la charge des deux parties" },
-  { critere: "Contact hôte/voyageur", escale: "Direct", agence: "Filtré par l'agence", direct: "Direct" },
-  { critere: "Gestion des litiges", escale: "Médiation intégrée", agence: "Variable selon l'agence", direct: "Aucune" },
-  { critere: "Personnalisation de l'annonce", escale: "Totale, par logement", agence: "Souvent standardisée", direct: "Totale" },
+  { critere: "Commission prélevée à l'hôte", escale: `${formatTaux(COMMISSION_RATE_TTC)} TTC`, airbnb: "15,5 % HT annoncés, généralisés au 13 octobre 2026", direct: "Aucune" },
+  { critere: "Frais pour le voyageur", escale: "0 €", airbnb: "Frais de service ajoutés au prix affiché", direct: "0 € mais aucune garantie" },
+  { critere: "Paiement sécurisé", escale: "Oui, retenu jusqu'à la fin du séjour", airbnb: "Oui", direct: "À la charge des deux parties" },
+  { critere: "Contact hôte/voyageur", escale: "Direct", airbnb: "Via la plateforme", direct: "Direct" },
+  { critere: "Gestion des litiges", escale: "Médiation intégrée", airbnb: "Procédure interne", direct: "Aucune" },
+  { critere: "Personnalisation de l'annonce", escale: "Totale, par logement", airbnb: "Encadrée par la plateforme", direct: "Totale" },
 ];
 
 const LOGEMENTS_APERCU = [
@@ -54,7 +81,7 @@ const TEMOIGNAGES = [
 ];
 
 const FAQ = [
-  { q: "Escale prend-elle une commission ?", r: "Oui, sur chaque réservation confirmée : 6% sans abonnement, ou 2% avec l'abonnement à 25 €/mois. La commission est toujours affichée avant le paiement, sans frais caché supplémentaire." },
+  { q: "Escale prend-elle une commission ?", r: `Oui, sur chaque réservation confirmée : ${formatTaux(COMMISSION_RATE_TTC)} TTC sans abonnement, ou ${formatTaux(SUBSCRIPTION_RATE_TTC)} TTC avec l'abonnement à ${formatEuros(SUBSCRIPTION_FEE_TTC)} par mois. Elle est supportée par l'hôte, toujours affichée avant le paiement, et aucun frais de service n'est facturé au voyageur.` },
   { q: "Quand l'hôte est-il payé ?", r: "Le lendemain de la fin du séjour, et seulement si aucun signalement n'est en cours sur la réservation." },
   { q: "Que se passe-t-il en cas de litige ?", r: "Le voyageur ou l'hôte peut signaler un problème avant le reversement des fonds. Notre équipe instruit la situation et décide de libérer les fonds, rembourser le voyageur, ou clore le signalement." },
   { q: "Dois-je souscrire une assurance en tant qu'hôte ?", r: "Cela dépend de votre statut (résidence principale louée occasionnellement ou bien dédié à la location). Nous vous guidons sur ce point lors de la publication de votre annonce." },
@@ -239,7 +266,7 @@ export default function PagePresentation() {
                 <tr className="border-b border-[#E4DCC8]">
                   <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#8C7A66] font-medium">Critère</th>
                   <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium text-[#1B3A3A] bg-[#F1EADB]">Escale</th>
-                  <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#8C7A66] font-medium">Agence traditionnelle</th>
+                  <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#8C7A66] font-medium">Airbnb</th>
                   <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#8C7A66] font-medium">Location directe</th>
                 </tr>
               </thead>
@@ -248,7 +275,7 @@ export default function PagePresentation() {
                   <tr key={row.critere} className={i > 0 ? "border-t border-[#EDE4D4]" : ""}>
                     <td className="px-4 py-3 text-[#1B3A3A] font-medium">{row.critere}</td>
                     <td className="px-4 py-3 text-[#1B3A3A] bg-[#F1EADB]/60">{row.escale}</td>
-                    <td className="px-4 py-3 text-[#6B5B4D]">{row.agence}</td>
+                    <td className="px-4 py-3 text-[#6B5B4D]">{row.airbnb}</td>
                     <td className="px-4 py-3 text-[#6B5B4D]">{row.direct}</td>
                   </tr>
                 ))}
@@ -256,6 +283,13 @@ export default function PagePresentation() {
             </table>
           </div>
         </div>
+        <p className="text-xs text-[#8C7A66] mt-3 leading-relaxed max-w-3xl">
+          Les taux Airbnb sont ceux annoncés publiquement par la plateforme et peuvent
+          évoluer ; ils sont exprimés hors taxes, si bien que le coût réellement supporté
+          par un hôte non assujetti à la TVA est supérieur au taux affiché. Nous vous
+          invitons à les vérifier directement auprès d'Airbnb avant toute comparaison
+          chiffrée.
+        </p>
       </section>
 
       {/* Comment ça marche */}
@@ -407,7 +441,7 @@ export default function PagePresentation() {
             </div>
             <div className="border border-[#E4DCC8] rounded-xl p-5">
               <p className="text-xs uppercase tracking-wide text-[#8C7A66] mb-2">Hôtes · sans abonnement</p>
-              <p className="font-serif text-2xl text-[#1B3A3A] mb-1">6%</p>
+              <p className="font-serif text-2xl text-[#1B3A3A] mb-1">{formatTaux(COMMISSION_RATE_TTC)}</p>
               <p className="text-xs text-[#6B5B4D]">Prélevés uniquement sur les réservations confirmées, jamais sur la publication.</p>
             </div>
             <div className="border-2 border-[#2F6E6E] rounded-xl p-5 relative">
@@ -416,37 +450,41 @@ export default function PagePresentation() {
               </span>
               <p className="text-xs uppercase tracking-wide text-[#8C7A66] mb-2 mt-1">Hôtes · avec abonnement</p>
               <p className="font-serif text-2xl text-[#1B3A3A] mb-1">
-                25 €<span className="text-base text-[#6B5B4D]">/mois</span> + 2%
+                {formatEuros(SUBSCRIPTION_FEE_TTC)}
+                <span className="text-base text-[#6B5B4D]">/mois</span> + {formatTaux(SUBSCRIPTION_RATE_TTC)}
               </p>
-              <p className="text-xs text-[#6B5B4D]">Trois fois moins de commission sur chaque réservation : 2% au lieu de 6%.</p>
+              <p className="text-xs text-[#6B5B4D]">
+                Une commission divisée par près de deux sur chaque réservation :{" "}
+                {formatTaux(SUBSCRIPTION_RATE_TTC)} au lieu de {formatTaux(COMMISSION_RATE_TTC)}.
+              </p>
             </div>
           </div>
 
           <div className="max-w-4xl mt-5 border border-[#E4DCC8] bg-[#F1EADB] rounded-xl p-5">
             <p className="text-sm text-[#1B3A3A] font-medium mb-2">
-              À partir de 625 € de réservations par mois, l'abonnement coûte moins cher.
+              À partir de {SEUIL_ABONNEMENT} € de réservations par mois, l'abonnement coûte
+              moins cher.
             </p>
             <p className="text-sm text-[#6B5B4D] leading-relaxed mb-4">
-              Plus vous louez, plus l'écart se creuse : la commission de 6% grimpe avec vos
-              revenus, l'abonnement non. C'est la formule pensée pour les hôtes qui louent
-              toute l'année.
+              Plus vous louez, plus l'écart se creuse : la commission de{" "}
+              {formatTaux(COMMISSION_RATE_TTC)} grimpe avec vos revenus, la part fixe de
+              l'abonnement non. C'est la formule pensée pour les hôtes qui louent toute
+              l'année.
             </p>
             <div className="overflow-x-auto">
               <table className="w-full text-xs border-collapse">
                 <thead>
                   <tr className="text-left text-[#8C7A66]">
                     <th className="border-b border-[#D8CCB0] py-2 pr-4 font-medium">Réservations / mois</th>
-                    <th className="border-b border-[#D8CCB0] py-2 pr-4 font-medium">Sans abonnement (6%)</th>
+                    <th className="border-b border-[#D8CCB0] py-2 pr-4 font-medium">
+                      Sans abonnement ({formatTaux(COMMISSION_RATE_TTC)})
+                    </th>
                     <th className="border-b border-[#D8CCB0] py-2 pr-4 font-medium">Avec abonnement</th>
                     <th className="border-b border-[#D8CCB0] py-2 font-medium">Économie / an</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { ca: 625, sans: 38, avec: 38, gain: 0 },
-                    { ca: 1500, sans: 90, avec: 55, gain: 420 },
-                    { ca: 3000, sans: 180, avec: 85, gain: 1140 },
-                  ].map((l) => (
+                  {EXEMPLES_TARIFS.map((l) => (
                     <tr key={l.ca}>
                       <td className="border-b border-[#E4DCC8] py-2.5 pr-4 text-[#1B3A3A]">{l.ca} €</td>
                       <td className="border-b border-[#E4DCC8] py-2.5 pr-4 text-[#6B5B4D]">{l.sans} €</td>

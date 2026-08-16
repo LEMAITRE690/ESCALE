@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Wallet, CheckCircle2, AlertTriangle, ArrowRight } from "lucide-react";
+import { COMMISSION_RATE_TTC, formatTaux } from "@/lib/pricing";
 
 // À intégrer dans les paramètres de l'espace hôte (onglet "Paiements").
 
@@ -29,6 +30,14 @@ export default function SetupPaiementsHote({ userId, stripeAccountId, onboarding
           reversés automatiquement le lendemain de la fin du séjour, déduction faite de la commission
           Escale — un délai qui protège voyageurs et hôtes contre les fraudes et les annonces non conformes.
         </p>
+      </div>
+
+      <div className="text-xs text-[#6B5B4D] bg-[#F1EADB] border border-[#E4DCC8] rounded-lg px-3 py-2.5 leading-relaxed">
+        <span className="font-medium text-[#1B3A3A]">
+          Votre commission : {formatTaux(COMMISSION_RATE_TTC)} TTC
+        </span>{" "}
+        du montant du séjour, taxe de séjour exclue. Elle est retenue sur le reversement et
+        donne lieu à une facture téléchargeable depuis « Revenus et factures ».
       </div>
 
       {onboardingComplete ? (
