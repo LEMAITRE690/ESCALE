@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import RevenusHote from "@/components/RevenusHote";
 import ChoixFormule from "@/components/ChoixFormule";
+import AcceptationDocument from "@/components/AcceptationDocument";
 import FichesConciergeries from "@/components/admin/FichesConciergeries";
 
 // ---------------------------------------------------------------------------
@@ -2611,7 +2612,7 @@ function FilDiscussionHote({ reservationId, interlocuteurLabel }) {
 // Espace hôte
 // ---------------------------------------------------------------------------
 
-function EspaceHote({ mesAnnoncesReelles = null, mesReservationsReelles = null, mesAvisReels = null, mesSignalementsReels = null, mesCoHotesReels = null, monPartenaireReel = null, mesDocumentsReels = null, mesRevenusMensuelsReels = null }) {
+function EspaceHote({ cgvAcceptee = true, mesAnnoncesReelles = null, mesReservationsReelles = null, mesAvisReels = null, mesSignalementsReels = null, mesCoHotesReels = null, monPartenaireReel = null, mesDocumentsReels = null, mesRevenusMensuelsReels = null }) {
   // Si la page serveur a fourni de vraies réservations (même une liste
   // vide), le revenu du mois est recalculé dessus ; sinon on retombe sur
   // l'exemple de démonstration.
@@ -2769,6 +2770,38 @@ function EspaceHote({ mesAnnoncesReelles = null, mesReservationsReelles = null, 
     );
   }
 
+  // Gestion d'annonces conditionnée à l'acceptation des CGV en vigueur.
+  // La consultation des réservations et la messagerie restent ouvertes : un
+  // voyageur en cours de séjour ne doit pas se retrouver sans interlocuteur.
+  const VUES_SOUMISES_AUX_CGV = ["publier", "preferences", "photos", "inventaire", "co_hotes"];
+  if (!cgvAcceptee && VUES_SOUMISES_AUX_CGV.includes(vue)) {
+    return (
+      <div className="space-y-5">
+        <button
+          onClick={() => setVue("accueil")}
+          className="flex items-center gap-1.5 text-sm text-[#6B5B4D] hover:text-[#1B3A3A] transition-colors"
+        >
+          <ChevronLeft size={15} /> Retour au tableau de bord
+        </button>
+        <div>
+          <h2 className="font-serif text-2xl text-[#1B3A3A] mb-1">
+            Acceptation des conditions requise
+          </h2>
+          <p className="text-sm text-[#6B5B4D]">
+            La gestion de vos annonces est suspendue jusqu'à l'acceptation de la version
+            en vigueur des conditions générales de vente. Vos annonces publiées et vos
+            réservations en cours ne sont pas affectées.
+          </p>
+        </div>
+        <AcceptationDocument
+          type="cgv_hotes"
+          intitule="J'ai lu et j'accepte les Conditions Générales de Vente"
+          onAccepte={() => window.location.reload()}
+        />
+      </div>
+    );
+  }
+
   if (vue === "revenus") {
     return <RevenusHote onRetour={() => setVue("accueil")} />;
   }
@@ -2830,6 +2863,25 @@ function EspaceHote({ mesAnnoncesReelles = null, mesReservationsReelles = null, 
           <MetricCard icon={Star} label="Note moyenne" value="4,8 / 5" sub="34 avis" />
         </div>
       </div>
+
+      {!cgvAcceptee && (
+        <div className="border border-[#C97B3D] bg-[#F1EADB] rounded-xl p-4 flex items-start gap-2.5">
+          <ShieldAlert size={16} className="text-[#C97B3D] mt-0.5 shrink-0" />
+          <div className="text-sm text-[#8A5A2B] leading-relaxed">
+            <p className="font-medium mb-0.5">Conditions générales de vente à accepter</p>
+            <p className="text-xs">
+              La publication et la modification de vos annonces sont suspendues jusqu'à
+              votre acceptation.{" "}
+              <button
+                onClick={() => setVue("publier")}
+                className="underline font-medium hover:text-[#1B3A3A]"
+              >
+                Lire et accepter
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <button
@@ -3415,7 +3467,7 @@ function BackOfficeAdmin() {
 // Composant principal
 // ---------------------------------------------------------------------------
 
-export default function GestionLocations({ role = "admin", nomUtilisateur = "", mesAnnonces = null, mesReservations = null, mesAvis = null, mesSignalements = null, mesCoHotes = null, monPartenaire = null, mesDocuments = null, mesRevenusMensuels = null }) {
+export default function GestionLocations({ role = "admin", nomUtilisateur = "", mesAnnonces = null, mesReservations = null, mesAvis = null, mesSignalements = null, mesCoHotes = null, monPartenaire = null, mesDocuments = null, mesRevenusMensuels = null, cgvAcceptee = true }) {
   const [vue, setVue] = useState("hote");
   const estAdmin = role === "admin";
 
@@ -3459,6 +3511,7 @@ export default function GestionLocations({ role = "admin", nomUtilisateur = "", 
 
         {vue === "hote" || !estAdmin ? (
           <EspaceHote
+            cgvAcceptee={cgvAcceptee}
             mesAnnoncesReelles={mesAnnonces}
             mesReservationsReelles={mesReservations}
             mesAvisReels={mesAvis}

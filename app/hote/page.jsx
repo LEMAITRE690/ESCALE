@@ -190,8 +190,23 @@ export default async function PageHote() {
   }
   const mesRevenusMensuels = revenusParMois.map(({ mois, montant }) => ({ mois, montant: Math.round(montant) }));
 
+  // Acceptation de la version des CGV actuellement en vigueur. En l'absence de
+  // toute version publiée, la fonction n'existe pas encore (migration 0031) ou
+  // ne renvoie rien : on ne bloque alors personne.
+  const { data: cgvAcceptee } = await supabase.rpc("a_accepte_version_en_vigueur", {
+    p_user_id: user.id,
+    p_type: "cgv_hotes",
+  });
+
+  const { data: cgvEnVigueur } = await supabase
+    .from("legal_documents_en_vigueur")
+    .select("id")
+    .eq("type", "cgv_hotes")
+    .maybeSingle();
+
   return (
     <HoteDashboard
+      cgvAcceptee={!cgvEnVigueur || cgvAcceptee === true}
       role={profil?.role ?? "voyageur"}
       nomUtilisateur={profil?.full_name ?? ""}
       mesAnnonces={mesAnnonces}
