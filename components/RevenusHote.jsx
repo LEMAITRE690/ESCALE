@@ -2,8 +2,25 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  ChevronLeft, Wallet, Clock, Receipt, Download, Loader2, AlertTriangle,
+  ChevronLeft, Wallet, Clock, Receipt, Download, Loader2, AlertTriangle, Percent,
 } from "lucide-react";
+import {
+  COMMISSION_RATE_TTC,
+  SUBSCRIPTION_RATE_TTC,
+  SUBSCRIPTION_FEE_TTC,
+  formatTaux,
+  formatEuros,
+} from "@/lib/pricing";
+
+const LIBELLES_FORMULE = {
+  commission: () => `Commission — ${formatTaux(COMMISSION_RATE_TTC)} par réservation`,
+  abonnement: () =>
+    `Abonnement — ${formatEuros(SUBSCRIPTION_FEE_TTC)}/mois + ${formatTaux(SUBSCRIPTION_RATE_TTC)} par réservation`,
+};
+
+// Un abonnement en échec de prélèvement bascule l'hôte en formule Commission à
+// l'expiration du délai de grâce : on le signale avant que ça n'arrive.
+const STATUTS_A_SIGNALER = ["past_due", "unpaid"];
 
 // Récapitulatif comptable de l'hôte : ce qui a été reversé, ce qui reste à
 // venir, la commission supportée et les factures correspondantes.
@@ -39,6 +56,7 @@ export default function RevenusHote({ onRetour }) {
   const [etat, setEtat] = useState("chargement");
   const [lignes, setLignes] = useState([]);
   const [totaux, setTotaux] = useState({ commission: 0, dejaReverse: 0, aVenir: 0 });
+  const [formule, setFormule] = useState(null);
 
   useEffect(() => {
     let annule = false;
@@ -50,6 +68,7 @@ export default function RevenusHote({ onRetour }) {
         if (annule) return;
         setLignes(data.lignes ?? []);
         setTotaux(data.totaux ?? { commission: 0, dejaReverse: 0, aVenir: 0 });
+        setFormule(data.formule ?? null);
         setEtat("pret");
       } catch {
         if (!annule) setEtat("erreur");
@@ -94,6 +113,43 @@ export default function RevenusHote({ onRetour }) {
 
       {etat === "pret" && (
         <>
+          {formule && (
+            <div className="border border-[#E4DCC8] bg-[#F1EADB] rounded-xl p-4">
+              <div className="flex items-start gap-2.5">
+                <Percent size={16} className="text-[#C97B3D] mt-0.5 shrink-0" />
+                <div className="text-sm leading-relaxed">
+                  <p className="text-[#1B3A3A]">
+                    <span className="font-medium">Votre formule : </span>
+                    {(LIBELLES_FORMULE[formule.active] ?? LIBELLES_FORMULE.commission)()}
+                  </p>
+
+                  {formule.prochainPrelevement && formule.active === "abonnement" && (
+                    <p className="text-xs text-[#6B5B4D] mt-1">
+                      Prochain prélèvement le {fmtDate(formule.prochainPrelevement)}.
+                    </p>
+                  )}
+
+                  {formule.enAttente && (
+                    <p className="text-xs text-[#6B5B4D] mt-1">
+                      Changement programmé : passage en formule{" "}
+                      {formule.enAttente === "abonnement" ? "Abonnement" : "Commission"} le{" "}
+                      {fmtDate(formule.priseEffetEnAttente)}. Les séjours dont l'arrivée est
+                      antérieure restent au taux actuel.
+                    </p>
+                  )}
+
+                  {STATUTS_A_SIGNALER.includes(formule.statutAbonnement) && (
+                    <p className="text-xs text-[#8A5A2B] mt-1.5 font-medium">
+                      Le prélèvement de votre abonnement a échoué. Sans régularisation, vous
+                      repasserez automatiquement en formule Commission — vos annonces ne sont
+                      pas affectées.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid sm:grid-cols-3 gap-3">
             <Tuile
               icon={Wallet}

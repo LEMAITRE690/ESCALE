@@ -35,6 +35,33 @@ export const SUBSCRIPTION_RATE_HT = tarifs.SUBSCRIPTION_RATE_HT;
  */
 export const CONCIERGERIE_RETROCOMMISSION = tarifs.CONCIERGERIE_RETROCOMMISSION;
 
+/**
+ * Rétrocommission en formule Abonnement : un demi-point, la commission de
+ * base y étant déjà réduite. Escale conserve donc 4,5 % nets contre 7,5 % en
+ * formule Commission.
+ */
+export const CONCIERGERIE_RETROCOMMISSION_ABONNEMENT =
+  tarifs.CONCIERGERIE_RETROCOMMISSION_ABONNEMENT;
+
+/** Les deux formules tarifaires proposées aux hôtes. */
+export type FormuleTarifaire = "commission" | "abonnement";
+
+/**
+ * Taux applicables à une formule donnée. Regroupés ici pour que le code de
+ * paiement n'ait jamais à choisir entre deux constantes selon la formule.
+ */
+export function tauxPourFormule(formule: FormuleTarifaire) {
+  return formule === "abonnement"
+    ? {
+        commission: tarifs.SUBSCRIPTION_RATE_TTC,
+        retrocommission: tarifs.CONCIERGERIE_RETROCOMMISSION_ABONNEMENT,
+      }
+    : {
+        commission: tarifs.COMMISSION_RATE_TTC,
+        retrocommission: tarifs.CONCIERGERIE_RETROCOMMISSION,
+      };
+}
+
 /** Taux de TVA applicable à la commission Escale. */
 export const VAT_RATE = tarifs.VAT_RATE;
 

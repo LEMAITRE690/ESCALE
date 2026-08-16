@@ -32,6 +32,17 @@ export async function GET() {
     return NextResponse.json({ error: "Connectez-vous." }, { status: 401 });
   }
 
+  // Formule active, changement programmé et état de l'abonnement. La vue est
+  // absente tant que la migration 0029 n'est pas appliquée : on dégrade alors
+  // vers la formule Commission plutôt que de faire échouer la page.
+  const { data: formule } = await supabaseAdmin
+    .from("host_pricing_state")
+    .select(
+      "formule_active, formule_en_attente, prise_effet_en_attente, subscription_status, subscription_current_period_end"
+    )
+    .eq("host_id", user.id)
+    .maybeSingle();
+
   const { data, error } = await supabaseAdmin
     .from("payments")
     .select(
@@ -104,5 +115,15 @@ export async function GET() {
     { commission: 0, dejaReverse: 0, aVenir: 0 }
   );
 
-  return NextResponse.json({ lignes, totaux });
+  return NextResponse.json({
+    lignes,
+    totaux,
+    formule: {
+      active: formule?.formule_active ?? "commission",
+      enAttente: formule?.formule_en_attente ?? null,
+      priseEffetEnAttente: formule?.prise_effet_en_attente ?? null,
+      statutAbonnement: formule?.subscription_status ?? null,
+      prochainPrelevement: formule?.subscription_current_period_end ?? null,
+    },
+  });
 }
