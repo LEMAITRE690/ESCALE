@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
+import { VAT_RATE } from "@/lib/pricing";
 
 // Nombre de jours de rétention après la fin du séjour avant reversement
 const DELAI_RETENTION_JOURS = 1;
@@ -72,6 +73,25 @@ export async function GET(req: NextRequest) {
         .eq("id", paiement.id);
 
       resultats.push({ paymentId: paiement.id, status: "transferred" });
+
+      // Facture de commission : émise au reversement, moment où la commission
+      // est définitivement acquise. La fonction SQL est idempotente — un rejeu
+      // du cron sur ce paiement renvoie la facture existante sans consommer de
+      // numéro, ce qui laisserait un trou dans la séquence.
+      const { error: erreurFacture } = await supabase.rpc("creer_facture_commission", {
+        p_payment_id: paiement.id,
+        p_vat_rate: VAT_RATE,
+      });
+
+      if (erreurFacture) {
+        // Le virement est fait : on ne le rejoue pas, on signale la facture
+        // manquante pour reprise plutôt que d'échouer tout le lot.
+        resultats.push({
+          paymentId: paiement.id,
+          status: "invoice_failed",
+          error: erreurFacture.message,
+        });
+      }
 
       // Reversement de la rétrocommission au partenaire conciergerie, le cas
       // échéant — indépendant du virement à l'hôte, jamais bloquant pour lui.
