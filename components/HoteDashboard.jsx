@@ -8,9 +8,10 @@ import {
   Calendar, Users, Wallet, Star, MessageCircle, Home, ShieldAlert,
   Search, ChevronLeft, ChevronRight, Send, CheckCircle2, Clock, XCircle,
   LayoutGrid, Building2, TrendingUp, Flag, Copy, Check, RefreshCw, AlertTriangle, Link2,
-  MapPin, Camera, ShieldCheck, X, GripVertical, BedDouble, Bath, Wifi, Car, Utensils, Wind, Waves, Plus, PawPrint, Sparkles, Moon, HeartHandshake, FileCheck, Receipt,
+  MapPin, Camera, ShieldCheck, X, GripVertical, BedDouble, Bath, Wifi, Car, Utensils, Wind, Waves, Plus, PawPrint, Sparkles, Moon, HeartHandshake, FileCheck, Receipt, Percent,
 } from "lucide-react";
 import RevenusHote from "@/components/RevenusHote";
+import ChoixFormule from "@/components/ChoixFormule";
 
 // ---------------------------------------------------------------------------
 // Données de démonstration
@@ -2771,6 +2772,10 @@ function EspaceHote({ mesAnnoncesReelles = null, mesReservationsReelles = null, 
     return <RevenusHote onRetour={() => setVue("accueil")} />;
   }
 
+  if (vue === "formule") {
+    return <ChoixFormule onRetour={() => setVue("accueil")} />;
+  }
+
   if (vue === "photos" && annonceSelectionnee) {
     return <GererPhotosAnnonce annonce={annonceSelectionnee} onRetour={() => setVue("accueil")} />;
   }
@@ -2843,6 +2848,12 @@ function EspaceHote({ mesAnnoncesReelles = null, mesReservationsReelles = null, 
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-[#E4DCC8] text-[#6B5B4D] text-sm font-medium hover:bg-[#EDE4D4] transition-colors"
         >
           <Receipt size={15} /> Revenus et factures
+        </button>
+        <button
+          onClick={() => setVue("formule")}
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-[#E4DCC8] text-[#6B5B4D] text-sm font-medium hover:bg-[#EDE4D4] transition-colors"
+        >
+          <Percent size={15} /> Ma formule
         </button>
       </div>
 

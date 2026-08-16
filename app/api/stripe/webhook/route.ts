@@ -3,10 +3,16 @@
 //   - account.updated                 (suivi de l'onboarding Connect)
 //   - payment_intent.succeeded        (paiement voyageur réussi)
 //   - payment_intent.payment_failed
+//   - checkout.session.completed      (souscription à la formule Abonnement)
+//   - invoice.payment_succeeded       (prélèvement mensuel encaissé)
+//   - invoice.payment_failed          (prélèvement rejeté, délai de grâce)
+//   - customer.subscription.updated   (changement de statut ou d'échéance)
+//   - customer.subscription.deleted   (résiliation ou impayé définitif)
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 import { stripe, computeFees } from "@/lib/stripe/client";
+import { debutMoisProchain } from "@/lib/stripe/subscription";
 import type { FormuleTarifaire } from "@/lib/pricing";
 
 export async function POST(req: NextRequest) {
@@ -134,6 +140,118 @@ export async function POST(req: NextRequest) {
             { onConflict: "stripe_payment_intent_id" }
           );
       }
+      break;
+    }
+
+    // ---------------------------------------------------------------------
+    // Formule Abonnement
+    // ---------------------------------------------------------------------
+
+    case "checkout.session.completed": {
+      const session = event.data.object as any;
+      if (session.mode !== "subscription") break;
+
+      const hostId = session.metadata?.host_id;
+      if (!hostId) break;
+
+      await supabase
+        .from("profiles")
+        .update({
+          stripe_customer_id: session.customer,
+          subscription_id: session.subscription,
+          subscription_status: "active",
+        })
+        .eq("id", hostId);
+
+      // La formule ne change pas immédiatement : la période Abonnement est
+      // ouverte au premier du mois suivant, date à laquelle Stripe prélèvera
+      // pour la première fois. D'ici là, l'hôte reste en formule Commission
+      // et voit son changement affiché comme programmé.
+      await supabase.rpc("basculer_formule_hote", {
+        p_host_id: hostId,
+        p_plan: "abonnement",
+        p_effective: debutMoisProchain().toISOString(),
+        p_cause: "souscription",
+      });
+      break;
+    }
+
+    case "invoice.payment_succeeded": {
+      const facture = event.data.object as any;
+      if (!facture.subscription) break;
+
+      await supabase
+        .from("profiles")
+        .update({
+          subscription_status: "active",
+          subscription_current_period_end: facture.period_end
+            ? new Date(facture.period_end * 1000).toISOString()
+            : null,
+        })
+        .eq("subscription_id", facture.subscription);
+      break;
+    }
+
+    case "invoice.payment_failed": {
+      const facture = event.data.object as any;
+      if (!facture.subscription) break;
+
+      // Aucune bascule ici : Stripe relance le prélèvement pendant son délai
+      // de grâce. L'hôte conserve la formule Abonnement le temps de
+      // régulariser, et l'échec lui est signalé dans son espace. La bascule
+      // n'intervient qu'à l'épuisement des relances, via
+      // customer.subscription.deleted.
+      await supabase
+        .from("profiles")
+        .update({ subscription_status: "past_due" })
+        .eq("subscription_id", facture.subscription);
+      break;
+    }
+
+    case "customer.subscription.updated": {
+      const abonnement = event.data.object as any;
+      await supabase
+        .from("profiles")
+        .update({
+          subscription_status: abonnement.status,
+          subscription_current_period_end: abonnement.current_period_end
+            ? new Date(abonnement.current_period_end * 1000).toISOString()
+            : null,
+        })
+        .eq("subscription_id", abonnement.id);
+      break;
+    }
+
+    case "customer.subscription.deleted": {
+      const abonnement = event.data.object as any;
+
+      const { data: profil } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("subscription_id", abonnement.id)
+        .maybeSingle();
+
+      if (!profil) break;
+
+      await supabase
+        .from("profiles")
+        .update({
+          subscription_status: "canceled",
+          subscription_id: null,
+          subscription_current_period_end: null,
+        })
+        .eq("id", profil.id);
+
+      // Retour en formule Commission, immédiat au sens où Stripe ne supprime
+      // l'abonnement qu'au bon moment : à la fin de la période payée en cas
+      // de résiliation, à l'épuisement des relances en cas d'impayé. Les
+      // annonces de l'hôte ne sont pas touchées.
+      await supabase.rpc("basculer_formule_hote", {
+        p_host_id: profil.id,
+        p_plan: "commission",
+        p_effective: new Date().toISOString(),
+        p_cause: abonnement.cancel_at_period_end ? "resiliation" : "echec_paiement",
+      });
       break;
     }
   }
