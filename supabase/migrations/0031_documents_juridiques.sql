@@ -8,16 +8,10 @@
 -- Le type 'cgl' est prévu dès maintenant, son intégration au tunnel de
 -- réservation étant traitée séparément.
 --
--- Les CGU, elles, restent délibérément HORS de ce dispositif : elles sont
--- rendues par app/cgu/page.jsx, qui compose ses taux depuis lib/pricing.json
--- et se met donc à jour toute seule quand la grille tarifaire change. Les
--- figer ici ferait perdre cet automatisme.
---
--- Conséquence assumée : l'acceptation des CGU n'est pas tracée. Ne publiez
--- pas de version de type 'cgu' dans cette table tant que app/cgu/page.jsx
--- reste la source affichée — les deux divergeraient sans que rien ne le
--- signale. Le type reste dans l'énumération pour le jour où ce choix serait
--- revu.
+-- Les CGU sont figées ici comme les autres documents. Leur texte est composé
+-- par lib/legal/cgu.mjs, qui interpole les taux au moment de la publication :
+-- une version publiée ne bouge plus, et un changement de grille tarifaire
+-- impose d''en publier une nouvelle.
 
 do $$ begin
   create type legal_document_type as enum ('cgu', 'cgv_hotes', 'cgl');

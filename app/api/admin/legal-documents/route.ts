@@ -10,10 +10,7 @@ import { createHash } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { verifierAdmin } from "@/lib/admin/auth";
 
-// 'cgu' est volontairement absent : les CGU sont rendues par app/cgu/page.jsx,
-// qui compose ses taux depuis lib/pricing.json. Publier une version en base
-// ferait diverger les deux sans que rien ne le signale (voir migration 0031).
-const TYPES = ["cgv_hotes", "cgl"] as const;
+const TYPES = ["cgu", "cgv_hotes", "cgl"] as const;
 
 export async function GET() {
   if (!(await verifierAdmin())) {
