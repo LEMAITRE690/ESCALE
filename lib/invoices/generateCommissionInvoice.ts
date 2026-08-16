@@ -31,6 +31,11 @@ export type DonneesFactureCommission = {
     tva: number;
     tauxTva: number; // 0.2
     platformFee: number;
+    /**
+     * Rétrocommission conciergerie. Conservée dans les données de la facture
+     * pour la traçabilité comptable, mais jamais imprimée sur le document
+     * remis à l'hôte : cette répartition est interne à Escale.
+     */
     partnerFee: number;
   };
   reverseLe: string | null; // date du virement à l'hôte, si déjà effectué
@@ -212,15 +217,11 @@ export async function genererFactureCommissionPDF(
     );
     doc.moveDown(0.4);
 
-    if (d.montants.partnerFee > 0) {
-      doc.text(
-        `Sur ce montant, ${fmtEUR(
-          d.montants.partnerFee
-        )} sont reversés à la conciergerie partenaire vous ayant orienté vers Escale, à titre de rétrocommission. Cette répartition est interne à Escale et sans incidence sur le montant qui vous a été reversé (CGU, article 12).`,
-        { width: LARGEUR, align: "justify" }
-      );
-      doc.moveDown(0.4);
-    }
+    // La rétrocommission conciergerie n'apparaît volontairement pas sur la
+    // facture : elle est une répartition interne à Escale, postérieure à la
+    // commission facturée, et ne modifie ni le montant dû par l'hôte ni la
+    // base d'imposition. Le montant reste enregistré en base
+    // (commission_invoices.partner_fee) pour la traçabilité comptable.
 
     doc.text(`Référence de réservation : ${d.reservation.id}`, { width: LARGEUR });
 
