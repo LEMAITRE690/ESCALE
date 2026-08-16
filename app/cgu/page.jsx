@@ -2,6 +2,19 @@ import React from "react";
 import Link from "next/link";
 import PageLegale, { Article, Avertissement } from "@/components/PageLegale";
 import { SOCIETE, CONTACTS, MEDIATEUR, DERNIERE_MAJ } from "@/lib/informations-legales";
+import {
+  COMMISSION_RATE_TTC,
+  COMMISSION_RATE_HT,
+  COMMISSION_RATE_TTC_NET_PARTENAIRE,
+  CONCIERGERIE_RETROCOMMISSION,
+  SUBSCRIPTION_FEE_TTC,
+  SUBSCRIPTION_FEE_HT,
+  SUBSCRIPTION_RATE_TTC,
+  SUBSCRIPTION_RATE_HT,
+  VAT_RATE,
+  formatTaux,
+  formatEuros,
+} from "@/lib/pricing";
 
 export const metadata = {
   title: "Conditions générales — Escale",
@@ -137,12 +150,58 @@ export default function PageCGU() {
           Le prix affiché comprend le tarif fixé par l'hôte, les options éventuellement
           sélectionnées et la commission d'Escale. Le montant total est présenté au
           voyageur avant tout paiement : aucun frais supplémentaire n'est ajouté après
-          confirmation.
+          confirmation. Aucun frais de service n'est facturé au voyageur, à quelque titre
+          que ce soit.
         </p>
         <p>
           Selon le réglage choisi par l'hôte, la réservation est confirmée immédiatement ou
           après validation de sa part. La confirmation vaut conclusion du contrat de
           location entre l'hôte et le voyageur.
+        </p>
+        <p>
+          La commission d'Escale est supportée par l'hôte et prélevée sur chaque
+          réservation confirmée, selon la formule à laquelle il est rattaché :
+        </p>
+        <ul className="list-disc pl-5 space-y-1.5">
+          <li>
+            <strong>Formule Commission</strong> : {formatTaux(COMMISSION_RATE_TTC)} du
+            montant du séjour.
+          </li>
+          <li>
+            <strong>Formule Abonnement</strong> : {formatEuros(SUBSCRIPTION_FEE_TTC)} par
+            mois, augmentés de {formatTaux(SUBSCRIPTION_RATE_TTC)} du montant du séjour.
+          </li>
+        </ul>
+        <p>
+          La taxe de séjour, collectée pour le compte de la commune et intégralement
+          reversée à l'hôte qui en est redevable, est exclue de l'assiette de la
+          commission.
+        </p>
+        <p>
+          Lorsque l'hôte a été orienté vers la plateforme par une conciergerie partenaire,
+          {" "}{formatTaux(CONCIERGERIE_RETROCOMMISSION)} du montant du séjour est reversé
+          à ce partenaire à titre de rétrocommission commerciale, Escale conservant{" "}
+          {formatTaux(COMMISSION_RATE_TTC_NET_PARTENAIRE)}. Cette répartition est interne à
+          Escale : elle est sans incidence sur les sommes dues par le voyageur comme sur le
+          montant reversé à l'hôte.
+        </p>
+      </Article>
+
+      <Article numero="7 bis" titre="Tarifs hôtes exprimés toutes taxes comprises">
+        <p>
+          Escale est assujettie à la taxe sur la valeur ajoutée. Les taux et montants
+          mentionnés à l'article 7 s'entendent <strong>toutes taxes comprises</strong>, au
+          taux de TVA en vigueur de {formatTaux(VAT_RATE, 0)}. Aucun montant ne s'ajoute à
+          ces taux au titre de la TVA.
+        </p>
+        <p>
+          À titre indicatif, les équivalents hors taxes sont de{" "}
+          {formatTaux(COMMISSION_RATE_HT)} pour la formule Commission et de{" "}
+          {formatEuros(SUBSCRIPTION_FEE_HT)} par mois majorés de{" "}
+          {formatTaux(SUBSCRIPTION_RATE_HT)} pour la formule Abonnement. En cas de
+          modification du taux légal de TVA, les taux toutes taxes comprises sont ajustés à
+          due concurrence, sans que cela constitue une modification des présentes
+          conditions au sens de l'article 15.
         </p>
       </Article>
 
