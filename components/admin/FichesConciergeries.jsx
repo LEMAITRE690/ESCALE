@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  Building2, Check, AlertTriangle, Loader2, ChevronDown, Save,
+  Building2, Check, AlertTriangle, Loader2, ChevronDown, Save, FileText,
 } from "lucide-react";
 
 // Fiches légales des conciergeries partenaires, saisies par un administrateur
@@ -151,6 +151,16 @@ function Fiche({ partenaire, onEnregistre }) {
               )}
               Enregistrer
             </button>
+            {partenaire.ficheComplete && (
+              <a
+                href={`/api/admin/partners/${partenaire.id}/contract`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[#E4DCC8] text-sm font-medium text-[#6B5B4D] hover:bg-[#EDE4D4] transition-colors"
+              >
+                <FileText size={14} /> Contrat prérempli
+              </a>
+            )}
             {etat === "enregistre" && (
               <span className="text-xs text-[#2F6E6E]">Enregistré.</span>
             )}
