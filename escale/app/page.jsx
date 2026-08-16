@@ -127,9 +127,13 @@ export default function PagePresentation() {
             <a href="#comment-ca-marche" onClick={() => setMenuOuvert(false)}>Comment ça marche</a>
             <a href="#fonctionnalites" onClick={() => setMenuOuvert(false)}>Fonctionnalités</a>
             <a href="#confiance" onClick={() => setMenuOuvert(false)}>Sécurité & confiance</a>
-            <button className="mt-2 px-4 py-2 rounded-lg bg-[#1B3A3A] text-[#F8F4EC] font-medium text-left">
+            <Link
+              href="/hote"
+              onClick={() => setMenuOuvert(false)}
+              className="mt-2 px-4 py-2 rounded-lg bg-[#1B3A3A] text-[#F8F4EC] font-medium text-left"
+            >
               Publier une annonce
-            </button>
+            </Link>
           </div>
         )}
       </header>
@@ -149,12 +153,12 @@ export default function PagePresentation() {
               qui protège les deux parties — sans frais cachés, sans agence.
             </p>
             <div className="flex flex-wrap gap-3 mb-8">
-              <button className="flex items-center gap-1.5 px-5 py-3 rounded-lg bg-[#1B3A3A] text-[#F8F4EC] text-sm font-medium hover:bg-[#2F6E6E] transition-colors">
+              <Link href="/recherche" className="flex items-center gap-1.5 px-5 py-3 rounded-lg bg-[#1B3A3A] text-[#F8F4EC] text-sm font-medium hover:bg-[#2F6E6E] transition-colors">
                 Trouver un logement <ArrowRight size={15} />
-              </button>
-              <button className="flex items-center gap-1.5 px-5 py-3 rounded-lg border border-[#D8CCB0] text-[#1B3A3A] text-sm font-medium hover:bg-[#F1EADB] transition-colors">
+              </Link>
+              <Link href="/hote" className="flex items-center gap-1.5 px-5 py-3 rounded-lg border border-[#D8CCB0] text-[#1B3A3A] text-sm font-medium hover:bg-[#F1EADB] transition-colors">
                 Devenir hôte
-              </button>
+              </Link>
             </div>
             <div className="flex flex-wrap gap-4">
               {TAMPONS_CONFIANCE.map(({ icon: Icon, label }, i) => (
@@ -295,9 +299,9 @@ export default function PagePresentation() {
       <section className="max-w-6xl mx-auto px-5 pb-16 md:pb-20">
         <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
           <h2 className="font-serif text-2xl md:text-3xl">Quelques escales du moment</h2>
-          <button className="flex items-center gap-1 text-sm text-[#2F6E6E] hover:text-[#1B3A3A] transition-colors font-medium">
+          <Link href="/recherche" className="flex items-center gap-1 text-sm text-[#2F6E6E] hover:text-[#1B3A3A] transition-colors font-medium">
             Voir tous les logements <ArrowRight size={14} />
-          </button>
+          </Link>
         </div>
         <div className="grid sm:grid-cols-3 gap-5">
           {LOGEMENTS_APERCU.map((l) => (
@@ -465,12 +469,12 @@ export default function PagePresentation() {
             Que vous cherchiez un logement ou souhaitiez accueillir des voyageurs, tout commence ici.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
-            <button className="flex items-center gap-1.5 px-5 py-3 rounded-lg bg-[#1B3A3A] text-[#F8F4EC] text-sm font-medium hover:bg-[#2F6E6E] transition-colors">
+            <Link href="/recherche" className="flex items-center gap-1.5 px-5 py-3 rounded-lg bg-[#1B3A3A] text-[#F8F4EC] text-sm font-medium hover:bg-[#2F6E6E] transition-colors">
               Trouver un logement <ArrowRight size={15} />
-            </button>
-            <button className="flex items-center gap-1.5 px-5 py-3 rounded-lg border border-[#D8CCB0] text-[#1B3A3A] text-sm font-medium hover:bg-[#FFFDF8] transition-colors">
+            </Link>
+            <Link href="/hote" className="flex items-center gap-1.5 px-5 py-3 rounded-lg border border-[#D8CCB0] text-[#1B3A3A] text-sm font-medium hover:bg-[#FFFDF8] transition-colors">
               <Home size={15} /> Devenir hôte
-            </button>
+            </Link>
           </div>
         </div>
       </section>
