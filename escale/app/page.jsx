@@ -379,9 +379,9 @@ export default function PagePresentation() {
               Notre statut d'intermédiaire, la gestion des litiges et le fonctionnement des
               paiements sont détaillés noir sur blanc dans nos conditions générales.
             </p>
-            <button className="flex items-center gap-1.5 text-sm font-medium text-[#C97B3D] hover:text-[#F8F4EC] transition-colors">
+            <Link href="/cgu" className="flex items-center gap-1.5 text-sm font-medium text-[#C97B3D] hover:text-[#F8F4EC] transition-colors">
               Lire les CGU <ArrowRight size={14} />
-            </button>
+            </Link>
           </div>
         </div>
       </section>
@@ -436,7 +436,7 @@ export default function PagePresentation() {
       </section>
 
       {/* FAQ */}
-      <section className="bg-[#FFFDF8] border-y border-[#E4DCC8]">
+      <section id="faq" className="bg-[#FFFDF8] border-y border-[#E4DCC8]">
         <div className="max-w-3xl mx-auto px-5 py-16 md:py-20">
           <h2 className="font-serif text-2xl md:text-3xl mb-8">Questions fréquentes</h2>
           <div className="space-y-2">
@@ -489,9 +489,9 @@ export default function PagePresentation() {
             <span className="font-serif text-sm text-[#1B3A3A]">Escale</span>
           </div>
           <div className="flex flex-wrap items-center gap-5 text-xs text-[#8C7A66]">
-            <a href="#" className="hover:text-[#1B3A3A] transition-colors">Conditions générales</a>
-            <a href="#" className="hover:text-[#1B3A3A] transition-colors">Confidentialité</a>
-            <a href="#" className="hover:text-[#1B3A3A] transition-colors">Contact</a>
+            <Link href="/cgu" className="hover:text-[#1B3A3A] transition-colors">Conditions générales</Link>
+            <Link href="/confidentialite" className="hover:text-[#1B3A3A] transition-colors">Confidentialité</Link>
+            <Link href="/contact" className="hover:text-[#1B3A3A] transition-colors">Contact</Link>
           </div>
         </div>
       </footer>
