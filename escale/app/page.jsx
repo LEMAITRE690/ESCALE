@@ -20,7 +20,7 @@ const STATS = [
 ];
 
 const AVANTAGES = [
-  { icon: Wallet, titre: "Moins cher qu'une agence", texte: "Aucune commission d'agence classique : juste une commission unique, affichée avant paiement." },
+  { icon: Wallet, titre: "Moins cher qu'une agence", texte: "Aucune commission d'agence classique : 6% sur les réservations confirmées, ou 2% pour les hôtes abonnés, affichés avant paiement." },
   { icon: ShieldCheck, titre: "Paiement protégé", texte: "Les fonds du voyageur sont retenus jusqu'à la fin du séjour, dans l'intérêt des deux parties." },
   { icon: MessageCircle, titre: "Contact direct", texte: "Vous échangez directement avec l'hôte ou le voyageur, sans intermédiaire qui filtre la conversation." },
   { icon: PawPrint, titre: "Annonces personnalisables", texte: "Chaque hôte définit ses propres règles : animaux, horaires, annulation, caution — rien d'imposé par la plateforme." },
@@ -54,7 +54,7 @@ const TEMOIGNAGES = [
 ];
 
 const FAQ = [
-  { q: "Escale prend-elle une commission ?", r: "Oui, une commission est prélevée sur chaque réservation confirmée. Elle est toujours affichée avant le paiement, sans frais caché supplémentaire." },
+  { q: "Escale prend-elle une commission ?", r: "Oui, sur chaque réservation confirmée : 6% sans abonnement, ou 2% avec l'abonnement à 25 €/mois. La commission est toujours affichée avant le paiement, sans frais caché supplémentaire." },
   { q: "Quand l'hôte est-il payé ?", r: "Le lendemain de la fin du séjour, et seulement si aucun signalement n'est en cours sur la réservation." },
   { q: "Que se passe-t-il en cas de litige ?", r: "Le voyageur ou l'hôte peut signaler un problème avant le reversement des fonds. Notre équipe instruit la situation et décide de libérer les fonds, rembourser le voyageur, ou clore le signalement." },
   { q: "Dois-je souscrire une assurance en tant qu'hôte ?", r: "Cela dépend de votre statut (résidence principale louée occasionnellement ou bien dédié à la location). Nous vous guidons sur ce point lors de la publication de votre annonce." },
@@ -395,23 +395,69 @@ export default function PagePresentation() {
             </span>
             <h2 className="font-serif text-2xl md:text-3xl mb-3">Une commission, aucune surprise</h2>
             <p className="text-sm text-[#6B5B4D]">
-              Escale se rémunère uniquement via une commission sur les réservations confirmées.
-              Publier une annonce et parcourir les logements reste entièrement gratuit.
+              Les hôtes choisissent entre une commission simple et un abonnement à commission
+              réduite. Publier une annonce et parcourir les logements reste entièrement gratuit.
             </p>
           </div>
-          <div className="grid sm:grid-cols-2 gap-5 max-w-2xl">
+          <div className="grid sm:grid-cols-3 gap-5 max-w-4xl">
             <div className="border border-[#E4DCC8] rounded-xl p-5">
               <p className="text-xs uppercase tracking-wide text-[#8C7A66] mb-2">Voyageurs</p>
               <p className="font-serif text-2xl text-[#1B3A3A] mb-1">0 €</p>
               <p className="text-xs text-[#6B5B4D]">Aucun frais de réservation. Le prix affiché est le prix payé.</p>
             </div>
+            <div className="border border-[#E4DCC8] rounded-xl p-5">
+              <p className="text-xs uppercase tracking-wide text-[#8C7A66] mb-2">Hôtes · sans abonnement</p>
+              <p className="font-serif text-2xl text-[#1B3A3A] mb-1">6%</p>
+              <p className="text-xs text-[#6B5B4D]">Prélevés uniquement sur les réservations confirmées, jamais sur la publication.</p>
+            </div>
             <div className="border-2 border-[#2F6E6E] rounded-xl p-5 relative">
               <span className="absolute -top-2.5 left-5 bg-[#2F6E6E] text-[#F8F4EC] text-[10px] px-2 py-0.5 rounded-full font-medium">
-                Hôtes
+                Hôtes réguliers
               </span>
-              <p className="text-xs uppercase tracking-wide text-[#8C7A66] mb-2 mt-1">Commission</p>
-              <p className="font-serif text-2xl text-[#1B3A3A] mb-1">12%</p>
-              <p className="text-xs text-[#6B5B4D]">Prélevée uniquement sur les réservations confirmées, jamais sur la publication.</p>
+              <p className="text-xs uppercase tracking-wide text-[#8C7A66] mb-2 mt-1">Hôtes · avec abonnement</p>
+              <p className="font-serif text-2xl text-[#1B3A3A] mb-1">
+                25 €<span className="text-base text-[#6B5B4D]">/mois</span> + 2%
+              </p>
+              <p className="text-xs text-[#6B5B4D]">Trois fois moins de commission sur chaque réservation : 2% au lieu de 6%.</p>
+            </div>
+          </div>
+
+          <div className="max-w-4xl mt-5 border border-[#E4DCC8] bg-[#F1EADB] rounded-xl p-5">
+            <p className="text-sm text-[#1B3A3A] font-medium mb-2">
+              À partir de 625 € de réservations par mois, l'abonnement coûte moins cher.
+            </p>
+            <p className="text-sm text-[#6B5B4D] leading-relaxed mb-4">
+              Plus vous louez, plus l'écart se creuse : la commission de 6% grimpe avec vos
+              revenus, l'abonnement non. C'est la formule pensée pour les hôtes qui louent
+              toute l'année.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="text-left text-[#8C7A66]">
+                    <th className="border-b border-[#D8CCB0] py-2 pr-4 font-medium">Réservations / mois</th>
+                    <th className="border-b border-[#D8CCB0] py-2 pr-4 font-medium">Sans abonnement (6%)</th>
+                    <th className="border-b border-[#D8CCB0] py-2 pr-4 font-medium">Avec abonnement</th>
+                    <th className="border-b border-[#D8CCB0] py-2 font-medium">Économie / an</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { ca: 625, sans: 38, avec: 38, gain: 0 },
+                    { ca: 1500, sans: 90, avec: 55, gain: 420 },
+                    { ca: 3000, sans: 180, avec: 85, gain: 1140 },
+                  ].map((l) => (
+                    <tr key={l.ca}>
+                      <td className="border-b border-[#E4DCC8] py-2.5 pr-4 text-[#1B3A3A]">{l.ca} €</td>
+                      <td className="border-b border-[#E4DCC8] py-2.5 pr-4 text-[#6B5B4D]">{l.sans} €</td>
+                      <td className="border-b border-[#E4DCC8] py-2.5 pr-4 text-[#6B5B4D]">{l.avec} €</td>
+                      <td className="border-b border-[#E4DCC8] py-2.5 font-medium text-[#2F6E6E]">
+                        {l.gain === 0 ? "—" : `${l.gain} €`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
