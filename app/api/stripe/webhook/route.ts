@@ -6,8 +6,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
-import { stripe } from "@/lib/stripe/client";
-import { computeFees } from "@/lib/stripe/client";
+import { stripe, computeFees } from "@/lib/stripe/client";
+import type { FormuleTarifaire } from "@/lib/pricing";
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -42,12 +42,23 @@ export async function POST(req: NextRequest) {
 
       const { data: reservation } = await supabase
         .from("reservations")
-        .select("id, listing_id, tourist_tax_amount, listings(host_id)")
+        .select("id, listing_id, start_date, tourist_tax_amount, listings(host_id)")
         .eq("id", reservationId)
         .single();
 
       const hostId = (reservation as any)?.listings?.host_id;
       const touristTaxAmount = (reservation as any)?.tourist_tax_amount ?? 0;
+
+      // Formule de l'hôte en vigueur à la date de DÉBUT DU SÉJOUR, telle que
+      // connue au moment de la réservation. Le taux est ainsi figé ici et ne
+      // suit pas les changements de formule postérieurs : deux réservations
+      // prises le même jour pour des séjours éloignés peuvent donc relever de
+      // formules différentes, si un changement est déjà programmé.
+      const { data: formuleLue } = await supabase.rpc("formule_hote_a", {
+        p_host_id: hostId,
+        p_date: (reservation as any)?.start_date ?? new Date().toISOString(),
+      });
+      const formule = (formuleLue as FormuleTarifaire) ?? "commission";
 
       // La rétrocommission suit le statut super-hôte ACTIF au moment du
       // paiement (partner_host_grants), pas un simple tag statique sur le
@@ -62,7 +73,11 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       const partnerId = octroiActif?.partner_id ?? null;
-      const { platformFee, partnerFee, amountHost } = computeFees(amountTotal, { hasPartner: !!partnerId, touristTaxAmount });
+      const { platformFee, partnerFee, amountHost, tauxCommission } = computeFees(amountTotal, {
+        hasPartner: !!partnerId,
+        touristTaxAmount,
+        formule,
+      });
 
       // Le paiement est enregistré "succeeded" mais transferred_at reste null :
       // les fonds sont retenus par Escale jusqu'à la fin du séjour.
@@ -78,6 +93,10 @@ export async function POST(req: NextRequest) {
           partner_fee: partnerId ? partnerFee : null,
           currency: intent.currency,
           status: "succeeded",
+          // Figés pour que la facture reste explicable sans rejouer
+          // l'historique des formules de l'hôte.
+          pricing_plan: formule,
+          commission_rate_applied: tauxCommission,
         },
         { onConflict: "stripe_payment_intent_id" }
       );

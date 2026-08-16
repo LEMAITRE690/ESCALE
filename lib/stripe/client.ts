@@ -1,5 +1,10 @@
 import Stripe from "stripe";
-import { COMMISSION_RATE_TTC, CONCIERGERIE_RETROCOMMISSION } from "@/lib/pricing";
+import {
+  COMMISSION_RATE_TTC,
+  CONCIERGERIE_RETROCOMMISSION,
+  tauxPourFormule,
+  type FormuleTarifaire,
+} from "@/lib/pricing";
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
@@ -23,21 +28,34 @@ export const PARTNER_RETROCOMMISSION_RATE = CONCIERGERIE_RETROCOMMISSION;
 
 export function computeFees(
   amountTotal: number,
-  options?: { hasPartner?: boolean; touristTaxAmount?: number }
+  options?: {
+    hasPartner?: boolean;
+    touristTaxAmount?: number;
+    /**
+     * Formule de l'hôte au titre de cette réservation. L'appelant la lit à la
+     * date de début du séjour (voir formule_hote_a en base) : le taux est figé
+     * à la réservation et ne suit pas les changements ultérieurs de l'hôte.
+     * Par défaut Commission, formule de base de tout hôte.
+     */
+    formule?: FormuleTarifaire;
+  }
 ) {
   const hasPartner = !!options?.hasPartner;
+  const { commission: tauxCommission, retrocommission: tauxRetrocommission } =
+    tauxPourFormule(options?.formule ?? "commission");
+
   // La taxe de séjour est collectée pour le compte de la commune : elle
   // sort intégralement de l'assiette de la commission, dans les deux sens
-  // (Escale n'en prend pas 8,5 %, le partenaire n'en prend pas 1 point). Elle est
+  // (ni Escale ni le partenaire n'en prélèvent la moindre part). Elle est
   // en revanche toujours incluse dans amountHost, puisque c'est l'hôte —
   // jamais Escale — qui la reverse ensuite à sa mairie.
   const touristTaxAmount = options?.touristTaxAmount ?? 0;
   const assietteCommission = Math.max(0, amountTotal - touristTaxAmount);
 
-  const totalCommission = Math.round(assietteCommission * PLATFORM_FEE_RATE);
-  const partnerFee = hasPartner ? Math.round(assietteCommission * PARTNER_RETROCOMMISSION_RATE) : 0;
+  const totalCommission = Math.round(assietteCommission * tauxCommission);
+  const partnerFee = hasPartner ? Math.round(assietteCommission * tauxRetrocommission) : 0;
   const platformFee = totalCommission - partnerFee;
   const amountHost = amountTotal - totalCommission;
 
-  return { platformFee, partnerFee, amountHost };
+  return { platformFee, partnerFee, amountHost, tauxCommission };
 }
