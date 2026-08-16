@@ -7,13 +7,8 @@
 // fin de séjour (le temps que le voyageur puisse signaler un problème).
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 // Nombre de jours de rétention après la fin du séjour avant reversement
 const DELAI_RETENTION_JOURS = 1;

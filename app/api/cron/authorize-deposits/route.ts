@@ -3,12 +3,7 @@
 // séjour débute aujourd'hui et qui ont une carte enregistrée.
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
