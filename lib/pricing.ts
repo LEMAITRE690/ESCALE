@@ -4,8 +4,7 @@ import tarifs from "./pricing.json";
 //
 // Les valeurs numériques vivent dans pricing.json et non ici, pour qu'un seul
 // fichier fasse foi côté application (import typé ci-dessous) comme côté
-// scripts Node — notamment scripts/generer-cgu-pdf.mjs, qui produit
-// docs/CGU_Escale.pdf et ne peut pas importer un module TypeScript.
+// scripts Node — notamment scripts/generer-cgu-pdf.mjs.
 //
 // Escale est assujettie à la TVA. Les taux affichés aux hôtes sont exprimés
 // TTC ; les équivalents HT ne servent qu'à la ventilation comptable.
@@ -37,8 +36,9 @@ export const CONCIERGERIE_RETROCOMMISSION = tarifs.CONCIERGERIE_RETROCOMMISSION;
 
 /**
  * Rétrocommission en formule Abonnement : un demi-point, la commission de
- * base y étant déjà réduite. Escale conserve donc 4,5 % nets contre 7,5 % en
- * formule Commission.
+ * base y étant déjà réduite. Escale conserve donc 4,5 % TTC avant ses autres
+ * coûts lorsqu'une conciergerie est impliquée, contre 7 % TTC en formule
+ * Commission avec une rétrocommission d'un point.
  */
 export const CONCIERGERIE_RETROCOMMISSION_ABONNEMENT =
   tarifs.CONCIERGERIE_RETROCOMMISSION_ABONNEMENT;
@@ -46,10 +46,7 @@ export const CONCIERGERIE_RETROCOMMISSION_ABONNEMENT =
 /** Les deux formules tarifaires proposées aux hôtes. */
 export type FormuleTarifaire = "commission" | "abonnement";
 
-/**
- * Taux applicables à une formule donnée. Regroupés ici pour que le code de
- * paiement n'ait jamais à choisir entre deux constantes selon la formule.
- */
+/** Taux applicables à une formule donnée. */
 export function tauxPourFormule(formule: FormuleTarifaire) {
   return formule === "abonnement"
     ? {
@@ -69,11 +66,9 @@ export const VAT_RATE = tarifs.VAT_RATE;
 export const COMMISSION_RATE_TTC_NET_PARTENAIRE =
   Math.round((COMMISSION_RATE_TTC - CONCIERGERIE_RETROCOMMISSION) * 10000) / 10000;
 
-/** Formate un taux en pourcentage à la française : 0.085 → « 8,5 % », 0.2 → « 20 % ». */
+/** Formate un taux en pourcentage à la française : 0.08 → « 8 % », 0.2 → « 20 % ». */
 export function formatTaux(taux: number, decimales = 2): string {
   const brut = (taux * 100).toFixed(decimales);
-  // Les zéros terminaux ne se retirent qu'après une virgule décimale : sans
-  // cette garde, « 20 » deviendrait « 2 ».
   const nettoye = brut.includes(".")
     ? brut.replace(/0+$/, "").replace(/\.$/, "")
     : brut;
