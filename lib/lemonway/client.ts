@@ -25,7 +25,6 @@ async function getAccessToken(): Promise<string> {
   const now = Date.now();
   if (tokenCache && tokenCache.expiresAt > now + 60_000) return tokenCache.token;
 
-  // Pour les environnements où un bearer est provisionné directement.
   if (process.env.LEMONWAY_ACCESS_TOKEN) return process.env.LEMONWAY_ACCESS_TOKEN;
 
   const apiKey = process.env.LEMONWAY_API_KEY;
@@ -46,9 +45,7 @@ async function getAccessToken(): Promise<string> {
     cache: "no-store",
   });
 
-  if (!res.ok) {
-    throw new Error(`Authentification Lemonway impossible (${res.status})`);
-  }
+  if (!res.ok) throw new Error(`Authentification Lemonway impossible (${res.status})`);
 
   const data = (await res.json()) as LemonwayToken;
   if (!data.access_token) throw new Error("Réponse OAuth Lemonway invalide");
@@ -60,8 +57,18 @@ async function getAccessToken(): Promise<string> {
   return data.access_token;
 }
 
+function psuHeaders(token: string, ip: string, userAgent: string) {
+  return {
+    Authorization: `Bearer ${token}`,
+    accept: "application/json",
+    "PSU-Accept-Language": "fr-FR",
+    "PSU-IP-Address": ip,
+    "PSU-User-Agent": userAgent || "Escale",
+  };
+}
+
 export type PayByBankInitInput = {
-  amount: number; // centimes
+  amount: number;
   accountId: string;
   reference: string;
   comment: string;
@@ -79,13 +86,8 @@ export type PayByBankInitResult = {
   redirectUrl: string;
 };
 
-/**
- * Initialise un Pay by Bank Lemonway via DirectKit v2.
- * Documentation officielle : POST /v2/moneyins/paybybank/transfer/init.
- */
 export async function initiatePayByBank(input: PayByBankInitInput): Promise<PayByBankInitResult> {
   const token = await getAccessToken();
-
   const body: Record<string, unknown> = {
     returnUrl: input.returnUrl,
     errorUrl: input.errorUrl,
@@ -104,12 +106,8 @@ export async function initiatePayByBank(input: PayByBankInitInput): Promise<PayB
   const res = await fetch(`${directKitBaseUrl()}/v2/moneyins/paybybank/transfer/init`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
-      accept: "application/json",
+      ...psuHeaders(token, input.ip, input.userAgent),
       "Content-Type": "application/json",
-      "PSU-Accept-Language": "fr-FR",
-      "PSU-IP-Address": input.ip,
-      "PSU-User-Agent": input.userAgent || "Escale",
     },
     body: JSON.stringify(body),
     cache: "no-store",
@@ -122,9 +120,44 @@ export async function initiatePayByBank(input: PayByBankInitInput): Promise<PayB
   }
 
   const redirectUrl = data.redirectUrl ?? data.redirectURL;
-  if (!redirectUrl || data.id == null) {
-    throw new Error("Réponse Pay by Bank Lemonway incomplète");
-  }
-
+  if (!redirectUrl || data.id == null) throw new Error("Réponse Pay by Bank Lemonway incomplète");
   return { id: String(data.id), redirectUrl: String(redirectUrl) };
+}
+
+export type LemonwayMoneyIn = {
+  id: string;
+  status: number | null;
+  amount: number | null;
+  raw: any;
+};
+
+/**
+ * Relit le Money-In directement chez Lemonway. Les notifications reçues ne
+ * sont jamais considérées comme preuve suffisante : leur rôle est seulement
+ * de déclencher cette vérification serveur-à-serveur.
+ */
+export async function retrieveMoneyIn(transactionId: string, ip = "127.0.0.1", userAgent = "Escale webhook"): Promise<LemonwayMoneyIn> {
+  const token = await getAccessToken();
+  const url = new URL(`${directKitBaseUrl()}/v2/moneyins`);
+  url.searchParams.set("transactionId", transactionId);
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: psuHeaders(token, ip, userAgent),
+    cache: "no-store",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`Vérification Lemonway impossible (${res.status})`);
+
+  const tx = data?.transactions?.value?.[0] ?? data?.transactions?.[0] ?? data?.transaction ?? data;
+  const id = tx?.id ?? tx?.transactionId ?? transactionId;
+  const statusRaw = tx?.status ?? tx?.transactionStatus ?? null;
+  const amountRaw = tx?.amount ?? tx?.creditAmount ?? tx?.totalAmount ?? null;
+
+  return {
+    id: String(id),
+    status: statusRaw == null ? null : Number(statusRaw),
+    amount: amountRaw == null ? null : Number(amountRaw),
+    raw: tx,
+  };
 }
