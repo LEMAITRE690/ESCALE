@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # `npm install` et non `npm ci` : le dépôt ne versionne pas de
+      # package-lock.json. En ajouter un rendrait ces installations
+      # reproductibles et accélérerait la CI.
+      - run: npm install --no-audit --no-fund
+
+      - name: Tests
+        run: npm test
+
+      # Le build ne dépend d'aucune variable d'environnement : les clients
+      # Supabase sont instanciés à la première requête et non au chargement
+      # des modules. Une régression sur ce point casserait la CI, ce qui est
+      # précisément l'intérêt de l'y laisser.
+      - name: Build
+        run: npm run build
