@@ -277,12 +277,6 @@ export type LemonwayPayoutReadiness = {
   rawIbans: any;
 };
 
-/**
- * Relit les données de paiement chez Lemonway au lieu de faire confiance à un
- * statut local. Les statuts exacts autorisés pour Money-Out restent soumis à
- * la configuration contractuelle de l'environnement ; par défaut, KYC2/KYC3
- * (6/7) sont considérés comme suffisamment avancés et l'IBAN doit être actif.
- */
 export async function retrievePayoutReadiness(accountId: string): Promise<LemonwayPayoutReadiness> {
   const token = await getAccessToken();
   const headers = psuHeaders(token, "127.0.0.1", "Escale KYC sync");
@@ -309,8 +303,10 @@ export async function retrievePayoutReadiness(accountId: string): Promise<Lemonw
   const kycRaw = account?.status ?? account?.kycStatus ?? account?.walletStatus ?? null;
   const kycStatus = kycRaw == null ? null : Number(kycRaw);
 
-  const ibanCandidates = ibanData?.ibans?.value ?? ibanData?.ibans ?? ibanData?.iban ? [ibanData?.iban].filter(Boolean) : [];
-  const normalizedIbans = Array.isArray(ibanCandidates) ? ibanCandidates : [];
+  const rawIbanList = ibanData?.ibans?.value
+    ?? ibanData?.ibans
+    ?? (ibanData?.iban ? [ibanData.iban] : []);
+  const normalizedIbans = Array.isArray(rawIbanList) ? rawIbanList : [rawIbanList].filter(Boolean);
   const activeIban = normalizedIbans.find((i: any) => {
     const s = String(i?.status ?? i?.ibanStatus ?? "").toLowerCase();
     return ["5", "6", "validated", "valid", "accepted", "active"].includes(s);
