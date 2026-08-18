@@ -41,13 +41,14 @@ export default async function PageHote() {
   const { data: reservationsBrutes } = idsAnnonces.length
     ? await supabase
         .from("reservations")
-        .select("id, start_date, end_date, amount_total, status, guest_first_name")
+        .select("id, start_date, end_date, amount_total, status, guest_first_name, guest_id")
         .in("listing_id", idsAnnonces)
         .order("start_date", { ascending: false })
     : { data: [] };
 
   const mesReservations = (reservationsBrutes ?? []).map((r) => ({
     id: r.id,
+    guestId: r.guest_id ?? null,
     voyageur: r.guest_first_name || "Voyageur",
     debut: r.start_date,
     fin: r.end_date,

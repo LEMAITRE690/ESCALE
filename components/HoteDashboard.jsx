@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import RevenusHote from "@/components/RevenusHote";
 import ChoixFormule from "@/components/ChoixFormule";
+import MesVoyageurs from "@/components/MesVoyageurs";
 import AcceptationDocument from "@/components/AcceptationDocument";
 import FichesConciergeries from "@/components/admin/FichesConciergeries";
 
@@ -2627,7 +2628,9 @@ function EspaceHote({ cgvAcceptee = true, mesAnnoncesReelles = null, mesReservat
   const annonces = mesAnnoncesReelles !== null ? mesAnnoncesReelles : mesAnnoncesHote;
   const reservations = mesReservationsReelles !== null ? mesReservationsReelles : reservationsHote;
   const revenusGraphique = mesRevenusMensuelsReels !== null ? mesRevenusMensuelsReels : revenusMensuels;
-  const [vue, setVue] = useState("accueil"); // accueil | publier | preferences | photos | etat_lieux | inventaire
+  const [vue, setVue] = useState("accueil"); // accueil | publier | preferences | photos | etat_lieux | inventaire | voyageurs | formule | revenus
+  // Fiche voyageur ouverte depuis le tableau des réservations.
+  const [voyageurSelectionne, setVoyageurSelectionne] = useState(null);
   const [defautsHote, setDefautsHote] = useState(DEFAUTS_HOTE_VIDES);
   const [annonceSelectionnee, setAnnonceSelectionnee] = useState(null);
   const [avisListe, setAvisListe] = useState(mesAvisReels !== null ? mesAvisReels : avisHote);
@@ -2810,6 +2813,18 @@ function EspaceHote({ cgvAcceptee = true, mesAnnoncesReelles = null, mesReservat
     return <ChoixFormule onRetour={() => setVue("accueil")} />;
   }
 
+  if (vue === "voyageurs") {
+    return (
+      <MesVoyageurs
+        guestIdInitial={voyageurSelectionne}
+        onRetour={() => {
+          setVoyageurSelectionne(null);
+          setVue("accueil");
+        }}
+      />
+    );
+  }
+
   if (vue === "photos" && annonceSelectionnee) {
     return <GererPhotosAnnonce annonce={annonceSelectionnee} onRetour={() => setVue("accueil")} />;
   }
@@ -2901,6 +2916,12 @@ function EspaceHote({ cgvAcceptee = true, mesAnnoncesReelles = null, mesReservat
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-[#E4DCC8] text-[#6B5B4D] text-sm font-medium hover:bg-[#EDE4D4] transition-colors"
         >
           <Receipt size={15} /> Revenus et factures
+        </button>
+        <button
+          onClick={() => setVue("voyageurs")}
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-[#E4DCC8] text-[#6B5B4D] text-sm font-medium hover:bg-[#EDE4D4] transition-colors"
+        >
+          <Users size={15} /> Mes voyageurs
         </button>
         <button
           onClick={() => setVue("formule")}
@@ -3008,7 +3029,22 @@ function EspaceHote({ cgvAcceptee = true, mesAnnoncesReelles = null, mesReservat
                 return (
                   <React.Fragment key={r.id}>
                     <tr className="border-t border-[#EDE4D4]">
-                      <td className="px-4 py-2.5 text-[#1B3A3A] font-medium">{r.voyageur}</td>
+                      <td className="px-4 py-2.5 text-[#1B3A3A] font-medium">
+                        {r.guestId ? (
+                          <button
+                            onClick={() => {
+                              setVoyageurSelectionne(r.guestId);
+                              setVue("voyageurs");
+                            }}
+                            className="hover:text-[#2F6E6E] transition-colors underline decoration-dotted underline-offset-2"
+                            title="Voir la fiche de ce voyageur"
+                          >
+                            {r.voyageur}
+                          </button>
+                        ) : (
+                          r.voyageur
+                        )}
+                      </td>
                       <td className="px-4 py-2.5 text-[#6B5B4D]">{fmtDate(r.debut)} → {fmtDate(r.fin)}</td>
                       <td className="px-4 py-2.5 text-[#1B3A3A]">{fmtEUR(r.montant)}</td>
                       <td className="px-4 py-2.5"><Badge statut={r.statut} /></td>
