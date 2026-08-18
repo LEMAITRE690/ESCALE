@@ -1,13 +1,5 @@
 // POST /api/stripe/webhook
-// À déclarer dans le dashboard Stripe sur les événements :
-//   - account.updated                 (suivi de l'onboarding Connect)
-//   - payment_intent.succeeded        (paiement voyageur réussi)
-//   - payment_intent.payment_failed
-//   - checkout.session.completed      (souscription à la formule Abonnement)
-//   - invoice.payment_succeeded       (prélèvement mensuel encaissé)
-//   - invoice.payment_failed          (prélèvement rejeté, délai de grâce)
-//   - customer.subscription.updated   (changement de statut ou d'échéance)
-//   - customer.subscription.deleted   (résiliation ou impayé définitif)
+// Webhook Stripe : paiements carte, Connect et abonnement hôte.
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
@@ -29,9 +21,7 @@ export async function POST(req: NextRequest) {
   switch (event.type) {
     case "account.updated": {
       const account = event.data.object as any;
-      // Un compte Express est opérationnel dès que ces deux conditions sont réunies
       const complete = account.charges_enabled && account.payouts_enabled;
-
       await supabase
         .from("profiles")
         .update({ stripe_onboarding_complete: complete })
@@ -45,7 +35,6 @@ export async function POST(req: NextRequest) {
       if (!reservationId) break;
 
       const amountTotal = intent.amount;
-
       const { data: reservation } = await supabase
         .from("reservations")
         .select("id, listing_id, start_date, tourist_tax_amount, listings(host_id)")
@@ -54,23 +43,14 @@ export async function POST(req: NextRequest) {
 
       const hostId = (reservation as any)?.listings?.host_id;
       const touristTaxAmount = (reservation as any)?.tourist_tax_amount ?? 0;
+      if (!hostId) break;
 
-      // Formule de l'hôte en vigueur à la date de DÉBUT DU SÉJOUR, telle que
-      // connue au moment de la réservation. Le taux est ainsi figé ici et ne
-      // suit pas les changements de formule postérieurs : deux réservations
-      // prises le même jour pour des séjours éloignés peuvent donc relever de
-      // formules différentes, si un changement est déjà programmé.
       const { data: formuleLue } = await supabase.rpc("formule_hote_a", {
         p_host_id: hostId,
         p_date: (reservation as any)?.start_date ?? new Date().toISOString(),
       });
       const formule = (formuleLue as FormuleTarifaire) ?? "commission";
 
-      // La rétrocommission suit le statut super-hôte ACTIF au moment du
-      // paiement (partner_host_grants), pas un simple tag statique sur le
-      // profil : si l'hôte a révoqué l'accès de sa conciergerie, la
-      // rétrocommission s'arrête automatiquement dès la réservation
-      // suivante, sans intervention manuelle.
       const { data: octroiActif } = await supabase
         .from("partner_host_grants")
         .select("partner_id")
@@ -79,28 +59,34 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       const partnerId = octroiActif?.partner_id ?? null;
-      const { platformFee, partnerFee, amountHost, tauxCommission } = computeFees(amountTotal, {
+      const {
+        platformFee,
+        partnerFee,
+        amountHost,
+        touristTaxHeld,
+        tauxCommission,
+      } = computeFees(amountTotal, {
         hasPartner: !!partnerId,
         touristTaxAmount,
         formule,
       });
 
-      // Le paiement est enregistré "succeeded" mais transferred_at reste null :
-      // les fonds sont retenus par Escale jusqu'à la fin du séjour.
       await supabase.from("payments").upsert(
         {
           reservation_id: reservationId,
           host_id: hostId,
           stripe_payment_intent_id: intent.id,
+          provider_payment_id: intent.id,
+          payment_provider: "stripe",
+          payment_channel: intent.metadata?.payment_channel ?? "card",
           amount_total: amountTotal,
           platform_fee: platformFee,
           amount_host: amountHost,
+          tourist_tax_held: touristTaxHeld,
           partner_id: partnerId,
           partner_fee: partnerId ? partnerFee : null,
           currency: intent.currency,
           status: "succeeded",
-          // Figés pour que la facture reste explicable sans rejouer
-          // l'historique des formules de l'hôte.
           pricing_plan: formule,
           commission_rate_applied: tauxCommission,
         },
@@ -112,9 +98,6 @@ export async function POST(req: NextRequest) {
         .update({ status: "confirmee" })
         .eq("id", reservationId);
 
-      // Si une caution est prévue, on mémorise le client et le moyen de
-      // paiement Stripe (enregistrés via setup_future_usage au checkout)
-      // pour pouvoir autoriser la caution séparément à l'arrivée.
       if (intent.customer && intent.payment_method) {
         await supabase
           .from("reservations")
@@ -133,24 +116,24 @@ export async function POST(req: NextRequest) {
       const intent = event.data.object as any;
       const reservationId = intent.metadata?.reservation_id;
       if (reservationId) {
-        await supabase
-          .from("payments")
-          .upsert(
-            { stripe_payment_intent_id: intent.id, status: "failed", reservation_id: reservationId },
-            { onConflict: "stripe_payment_intent_id" }
-          );
+        await supabase.from("payments").upsert(
+          {
+            stripe_payment_intent_id: intent.id,
+            provider_payment_id: intent.id,
+            payment_provider: "stripe",
+            payment_channel: intent.metadata?.payment_channel ?? "card",
+            status: "failed",
+            reservation_id: reservationId,
+          },
+          { onConflict: "stripe_payment_intent_id" }
+        );
       }
       break;
     }
 
-    // ---------------------------------------------------------------------
-    // Formule Abonnement
-    // ---------------------------------------------------------------------
-
     case "checkout.session.completed": {
       const session = event.data.object as any;
       if (session.mode !== "subscription") break;
-
       const hostId = session.metadata?.host_id;
       if (!hostId) break;
 
@@ -163,10 +146,6 @@ export async function POST(req: NextRequest) {
         })
         .eq("id", hostId);
 
-      // La formule ne change pas immédiatement : la période Abonnement est
-      // ouverte au premier du mois suivant, date à laquelle Stripe prélèvera
-      // pour la première fois. D'ici là, l'hôte reste en formule Commission
-      // et voit son changement affiché comme programmé.
       await supabase.rpc("basculer_formule_hote", {
         p_host_id: hostId,
         p_plan: "abonnement",
@@ -179,7 +158,6 @@ export async function POST(req: NextRequest) {
     case "invoice.payment_succeeded": {
       const facture = event.data.object as any;
       if (!facture.subscription) break;
-
       await supabase
         .from("profiles")
         .update({
@@ -195,12 +173,6 @@ export async function POST(req: NextRequest) {
     case "invoice.payment_failed": {
       const facture = event.data.object as any;
       if (!facture.subscription) break;
-
-      // Aucune bascule ici : Stripe relance le prélèvement pendant son délai
-      // de grâce. L'hôte conserve la formule Abonnement le temps de
-      // régulariser, et l'échec lui est signalé dans son espace. La bascule
-      // n'intervient qu'à l'épuisement des relances, via
-      // customer.subscription.deleted.
       await supabase
         .from("profiles")
         .update({ subscription_status: "past_due" })
@@ -224,13 +196,11 @@ export async function POST(req: NextRequest) {
 
     case "customer.subscription.deleted": {
       const abonnement = event.data.object as any;
-
       const { data: profil } = await supabase
         .from("profiles")
         .select("id")
         .eq("subscription_id", abonnement.id)
         .maybeSingle();
-
       if (!profil) break;
 
       await supabase
@@ -242,10 +212,6 @@ export async function POST(req: NextRequest) {
         })
         .eq("id", profil.id);
 
-      // Retour en formule Commission, immédiat au sens où Stripe ne supprime
-      // l'abonnement qu'au bon moment : à la fin de la période payée en cas
-      // de résiliation, à l'épuisement des relances en cas d'impayé. Les
-      // annonces de l'hôte ne sont pas touchées.
       await supabase.rpc("basculer_formule_hote", {
         p_host_id: profil.id,
         p_plan: "commission",
