@@ -13,18 +13,18 @@ export default function PagePaiementReservation() {
   const [enCours, setEnCours] = useState(null);
   const [erreur, setErreur] = useState("");
 
-  async function payerParCarte() {
+  async function demarrerPaiement(endpoint, canal) {
     setErreur("");
-    setEnCours("card");
+    setEnCours(canal);
     try {
-      const res = await fetch("/api/stripe/checkout", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reservationId }),
       });
       const data = await res.json();
       if (!res.ok || !data.url) {
-        setErreur(data.error || "Impossible de démarrer le paiement par carte.");
+        setErreur(data.error || "Impossible de démarrer le paiement.");
         return;
       }
       window.location.href = data.url;
@@ -35,31 +35,16 @@ export default function PagePaiementReservation() {
     }
   }
 
+  async function payerParCarte() {
+    return demarrerPaiement("/api/payments/card", "card");
+  }
+
   async function payerParBanque() {
-    setErreur("");
     if (!PAY_BY_BANK_ENABLED) {
       setErreur("Le paiement bancaire sécurisé est en cours d’activation. Utilisez la carte pour ce test.");
       return;
     }
-
-    setEnCours("bank");
-    try {
-      const res = await fetch("/api/payments/pay-by-bank", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reservationId }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.url) {
-        setErreur(data.error || "Impossible de démarrer le paiement bancaire.");
-        return;
-      }
-      window.location.href = data.url;
-    } catch {
-      setErreur("Le paiement bancaire est momentanément indisponible.");
-    } finally {
-      setEnCours(null);
-    }
+    return demarrerPaiement("/api/payments/pay-by-bank", "bank");
   }
 
   return (
@@ -89,7 +74,7 @@ export default function PagePaiementReservation() {
                   <span className="text-[10px] uppercase tracking-wide bg-[#1B3A3A] text-white rounded-full px-2 py-1">Recommandé</span>
                 </div>
                 <p className="text-xs text-[#6B5B4D] mt-1">
-                  Validation depuis votre application bancaire, sans saisie d’IBAN.
+                  Validation depuis votre application bancaire, sans saisie d’IBAN ni plafond de carte à gérer.
                 </p>
                 <button
                   onClick={payerParBanque}
@@ -121,7 +106,7 @@ export default function PagePaiementReservation() {
           <div className="mt-5 flex items-start gap-2 text-xs text-[#6B5B4D]">
             <ShieldCheck size={15} className="shrink-0 mt-0.5" />
             <p>
-              Le paiement est traité par un prestataire de paiement sécurisé. Les fonds sont séparés du compte d’exploitation d’ESCALE et le reversement à l’hôte intervient selon les conditions de la réservation.
+              Le paiement est traité par un prestataire de paiement réglementé. Les fonds sont conservés dans l’infrastructure du prestataire et le reversement à l’hôte intervient selon les conditions de la réservation.
             </p>
           </div>
         </div>
