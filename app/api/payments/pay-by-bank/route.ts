@@ -39,6 +39,15 @@ export async function POST(req: NextRequest) {
   if (reservation.status !== "en_attente") {
     return NextResponse.json({ error: "Cette réservation ne peut plus être payée." }, { status: 409 });
   }
+  if (!Number.isInteger(reservation.amount_total) || reservation.amount_total < 100) {
+    return NextResponse.json({ error: "Montant incompatible avec Pay by Bank." }, { status: 422 });
+  }
+  // Limite publique Lemonway Pay by Bank actuellement documentée : 15 000 €.
+  if (reservation.amount_total > 1_500_000) {
+    return NextResponse.json({
+      error: "Cette réservation dépasse la limite Pay by Bank. Utilisez la carte ou contactez le support.",
+    }, { status: 422 });
+  }
 
   const hostId = (reservation as any).listings?.host_id;
   if (!hostId) {
@@ -88,7 +97,7 @@ export async function POST(req: NextRequest) {
       bankId: bankId || undefined,
     });
 
-    const { error: ledgerError } = await supabase.from("payments").upsert({
+    const { error: ledgerError } = await supabase.from("payments").insert({
       reservation_id: reservationId,
       host_id: hostId,
       stripe_payment_intent_id: null,
@@ -105,7 +114,7 @@ export async function POST(req: NextRequest) {
       status: "pending",
       pricing_plan: formule,
       commission_rate_applied: breakdown.tauxCommission,
-    }, { onConflict: "payment_provider,provider_payment_id" });
+    });
 
     if (ledgerError) {
       return NextResponse.json({ error: "Impossible d'enregistrer le paiement." }, { status: 500 });
