@@ -1,17 +1,13 @@
 // GET /api/cron/release-payments
-// Déclenchée automatiquement chaque jour (voir vercel.json).
-// Recherche les séjours terminés dont le paiement n'a pas encore été
-// reversé à l'hôte, et déclenche le virement Stripe correspondant.
-//
-// Délai de sécurité : on ne libère les fonds que N jours après la date de
-// fin de séjour (le temps que le voyageur puisse signaler un problème).
+// Reverse les fonds après la fin du séjour. Les transferts Stripe utilisent
+// des clés d'idempotence déterministes : si le processus tombe après le
+// virement mais avant l'écriture Supabase, un rejeu ne peut pas payer deux fois.
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import { VAT_RATE } from "@/lib/pricing";
 
-// Nombre de jours de rétention après la fin du séjour avant reversement
 const DELAI_RETENTION_JOURS = 1;
 
 export async function GET(req: NextRequest) {
@@ -24,13 +20,12 @@ export async function GET(req: NextRequest) {
   dateLimite.setDate(dateLimite.getDate() - DELAI_RETENTION_JOURS);
   const dateLimiteISO = dateLimite.toISOString().slice(0, 10);
 
-  // Paiements réussis, non encore transférés, dont le séjour est terminé
-  // depuis au moins DELAI_RETENTION_JOURS et sans signalement actif.
   const { data: paiements, error } = await supabase
     .from("payments")
     .select(`
-      id, stripe_payment_intent_id, amount_host, host_id, status, transferred_at,
+      id, amount_host, host_id, status, transferred_at,
       partner_id, partner_fee, partner_transferred_at,
+      payment_provider,
       reservations!inner ( id, end_date, has_open_dispute )
     `)
     .eq("status", "succeeded")
@@ -46,6 +41,13 @@ export async function GET(req: NextRequest) {
 
   for (const paiement of paiements ?? []) {
     try {
+      // Tant qu'un second PSP n'est pas branché, ce cron ne traite que Stripe.
+      // La future couche PaymentProvider prendra le relais pour Lemonway.
+      if ((paiement as any).payment_provider && (paiement as any).payment_provider !== "stripe") {
+        resultats.push({ paymentId: paiement.id, status: "skipped_provider" });
+        continue;
+      }
+
       const { data: hote } = await supabase
         .from("profiles")
         .select("stripe_account_id, stripe_onboarding_complete")
@@ -57,35 +59,37 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
-      const transfer = await stripe.transfers.create({
-        amount: paiement.amount_host,
-        currency: "eur",
-        destination: hote.stripe_account_id,
-        transfer_group: `reservation_${(paiement as any).reservations.id}`,
-        // Remarque : on peut aussi passer "source_transaction" avec l'ID de
-        // charge (pas le payment_intent) pour rattacher visuellement ce
-        // virement au paiement d'origine dans le dashboard Stripe.
-      });
+      const reservationId = (paiement as any).reservations.id;
+      const transfer = await stripe.transfers.create(
+        {
+          amount: paiement.amount_host,
+          currency: "eur",
+          destination: hote.stripe_account_id,
+          transfer_group: `reservation_${reservationId}`,
+          metadata: { payment_id: paiement.id, reservation_id: reservationId, beneficiary: "host" },
+        },
+        { idempotencyKey: `escale-host-transfer-${paiement.id}` }
+      );
 
-      await supabase
+      const { error: erreurMaj } = await supabase
         .from("payments")
         .update({ transferred_at: new Date().toISOString(), stripe_transfer_id: transfer.id })
-        .eq("id", paiement.id);
+        .eq("id", paiement.id)
+        .is("transferred_at", null);
+
+      if (erreurMaj) {
+        // Le transfert Stripe reste sûr : le prochain rejeu réutilisera la
+        // même clé d'idempotence et récupérera le même transfert.
+        throw new Error(`Transfert effectué mais journalisation impossible: ${erreurMaj.message}`);
+      }
 
       resultats.push({ paymentId: paiement.id, status: "transferred" });
 
-      // Facture de commission : émise au reversement, moment où la commission
-      // est définitivement acquise. La fonction SQL est idempotente — un rejeu
-      // du cron sur ce paiement renvoie la facture existante sans consommer de
-      // numéro, ce qui laisserait un trou dans la séquence.
       const { error: erreurFacture } = await supabase.rpc("creer_facture_commission", {
         p_payment_id: paiement.id,
         p_vat_rate: VAT_RATE,
       });
-
       if (erreurFacture) {
-        // Le virement est fait : on ne le rejoue pas, on signale la facture
-        // manquante pour reprise plutôt que d'échouer tout le lot.
         resultats.push({
           paymentId: paiement.id,
           status: "invoice_failed",
@@ -93,8 +97,6 @@ export async function GET(req: NextRequest) {
         });
       }
 
-      // Reversement de la rétrocommission au partenaire conciergerie, le cas
-      // échéant — indépendant du virement à l'hôte, jamais bloquant pour lui.
       if (paiement.partner_id && paiement.partner_fee && !paiement.partner_transferred_at) {
         const { data: partenaire } = await supabase
           .from("partners")
@@ -103,23 +105,28 @@ export async function GET(req: NextRequest) {
           .single();
 
         if (partenaire?.stripe_account_id && partenaire.stripe_onboarding_complete) {
-          const transferPartenaire = await stripe.transfers.create({
-            amount: paiement.partner_fee,
-            currency: "eur",
-            destination: partenaire.stripe_account_id,
-            transfer_group: `reservation_${(paiement as any).reservations.id}_partenaire`,
-          });
+          const transferPartenaire = await stripe.transfers.create(
+            {
+              amount: paiement.partner_fee,
+              currency: "eur",
+              destination: partenaire.stripe_account_id,
+              transfer_group: `reservation_${reservationId}_partenaire`,
+              metadata: { payment_id: paiement.id, reservation_id: reservationId, beneficiary: "partner" },
+            },
+            { idempotencyKey: `escale-partner-transfer-${paiement.id}` }
+          );
+
           await supabase
             .from("payments")
-            .update({ partner_transferred_at: new Date().toISOString(), stripe_partner_transfer_id: transferPartenaire.id })
-            .eq("id", paiement.id);
+            .update({
+              partner_transferred_at: new Date().toISOString(),
+              stripe_partner_transfer_id: transferPartenaire.id,
+            })
+            .eq("id", paiement.id)
+            .is("partner_transferred_at", null);
         }
       }
 
-      // Même logique de rétention pour la caution : on la libère en même
-      // temps que le paiement principal, uniquement si elle est encore
-      // "autorisee" (pas déjà libérée ou prélevée pour un autre motif).
-      const reservationId = (paiement as any).reservations.id;
       const { data: resa } = await supabase
         .from("reservations")
         .select("deposit_status")
