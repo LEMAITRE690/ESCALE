@@ -24,7 +24,6 @@ function directKitBaseUrl() {
 async function getAccessToken(): Promise<string> {
   const now = Date.now();
   if (tokenCache && tokenCache.expiresAt > now + 60_000) return tokenCache.token;
-
   if (process.env.LEMONWAY_ACCESS_TOKEN) return process.env.LEMONWAY_ACCESS_TOKEN;
 
   const apiKey = process.env.LEMONWAY_API_KEY;
@@ -67,6 +66,20 @@ function psuHeaders(token: string, ip: string, userAgent: string) {
   };
 }
 
+function extractId(data: any): string | null {
+  const candidates = [
+    data?.id,
+    data?.transactionId,
+    data?.transaction?.id,
+    data?.p2p?.id,
+    data?.moneyOut?.id,
+    data?.trans?.hpay?.id,
+    data?.TRANS?.HPAY?.ID,
+  ];
+  const value = candidates.find((v) => v !== undefined && v !== null && String(v) !== "");
+  return value == null ? null : String(value);
+}
+
 export type PayByBankInitInput = {
   amount: number;
   accountId: string;
@@ -97,7 +110,7 @@ export async function initiatePayByBank(input: PayByBankInitInput): Promise<PayB
     commissionAmount: 0,
     autoCommission: false,
     countryCode: input.countryCode ?? "FR",
-    transferType: "instant",
+    transferType: 1,
     reference: input.reference,
     comment: input.comment.slice(0, 140),
   };
@@ -120,8 +133,9 @@ export async function initiatePayByBank(input: PayByBankInitInput): Promise<PayB
   }
 
   const redirectUrl = data.redirectUrl ?? data.redirectURL;
-  if (!redirectUrl || data.id == null) throw new Error("Réponse Pay by Bank Lemonway incomplète");
-  return { id: String(data.id), redirectUrl: String(redirectUrl) };
+  const id = extractId(data);
+  if (!redirectUrl || !id) throw new Error("Réponse Pay by Bank Lemonway incomplète");
+  return { id, redirectUrl: String(redirectUrl) };
 }
 
 export type LemonwayMoneyIn = {
@@ -131,11 +145,6 @@ export type LemonwayMoneyIn = {
   raw: any;
 };
 
-/**
- * Relit le Money-In directement chez Lemonway. Les notifications reçues ne
- * sont jamais considérées comme preuve suffisante : leur rôle est seulement
- * de déclencher cette vérification serveur-à-serveur.
- */
 export async function retrieveMoneyIn(transactionId: string, ip = "127.0.0.1", userAgent = "Escale webhook"): Promise<LemonwayMoneyIn> {
   const token = await getAccessToken();
   const url = new URL(`${directKitBaseUrl()}/v2/moneyins`);
@@ -160,4 +169,102 @@ export async function retrieveMoneyIn(transactionId: string, ip = "127.0.0.1", u
     amount: amountRaw == null ? null : Number(amountRaw),
     raw: tx,
   };
+}
+
+export type P2PInput = {
+  debitAccountId: string;
+  creditAccountId: string;
+  amount: number;
+  reference: string;
+  comment: string;
+  ip?: string;
+  userAgent?: string;
+};
+
+/** Ventilation interne entre deux Payment Accounts Lemonway. */
+export async function createP2P(input: P2PInput): Promise<{ id: string; raw: any }> {
+  const token = await getAccessToken();
+  const res = await fetch(`${directKitBaseUrl()}/v2/p2p`, {
+    method: "POST",
+    headers: {
+      ...psuHeaders(token, input.ip ?? "127.0.0.1", input.userAgent ?? "Escale payout"),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      debitAccountId: input.debitAccountId,
+      creditAccountId: input.creditAccountId,
+      amount: input.amount,
+      reference: input.reference.slice(0, 36),
+      comment: input.comment.slice(0, 140),
+    }),
+    cache: "no-store",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const message = data?.error?.message || data?.message || `P2P Lemonway impossible (${res.status})`;
+    throw new Error(message);
+  }
+  const id = extractId(data);
+  if (!id) throw new Error("Réponse P2P Lemonway incomplète");
+  return { id, raw: data };
+}
+
+export type MoneyOutInput = {
+  accountId: string;
+  ibanId?: number | null;
+  amount: number;
+  reference: string;
+  comment: string;
+  ip?: string;
+  userAgent?: string;
+};
+
+/** Reverse un Payment Account Lemonway vers l'IBAN validé du bénéficiaire. */
+export async function createMoneyOut(input: MoneyOutInput): Promise<{ id: string; raw: any }> {
+  const token = await getAccessToken();
+  const body: Record<string, unknown> = {
+    accountId: input.accountId,
+    totalAmount: input.amount,
+    commissionAmount: 0,
+    autoCommission: false,
+    comment: input.comment.slice(0, 140),
+    reference: input.reference.slice(0, 50),
+  };
+  if (input.ibanId != null) body.ibanId = input.ibanId;
+
+  const res = await fetch(`${directKitBaseUrl()}/v2/moneyouts`, {
+    method: "POST",
+    headers: {
+      ...psuHeaders(token, input.ip ?? "127.0.0.1", input.userAgent ?? "Escale payout"),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const message = data?.error?.message || data?.message || `Money-Out Lemonway impossible (${res.status})`;
+    throw new Error(message);
+  }
+  const id = extractId(data);
+  if (!id) throw new Error("Réponse Money-Out Lemonway incomplète");
+  return { id, raw: data };
+}
+
+/** Recherche un Money-Out par référence pour rendre les relances idempotentes. */
+export async function findMoneyOutByReference(reference: string): Promise<any | null> {
+  const token = await getAccessToken();
+  const url = new URL(`${directKitBaseUrl()}/v2/moneyouts`);
+  url.searchParams.set("reference", reference.slice(0, 50));
+  url.searchParams.set("limit", "1");
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: psuHeaders(token, "127.0.0.1", "Escale payout reconciliation"),
+    cache: "no-store",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`Recherche Money-Out Lemonway impossible (${res.status})`);
+  const tx = data?.transactions?.value?.[0] ?? data?.transactions?.[0] ?? data?.moneyOuts?.[0] ?? null;
+  return tx ?? null;
 }
