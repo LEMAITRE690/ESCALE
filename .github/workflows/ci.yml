@@ -1,0 +1,42 @@
+name: ESCALE CI
+
+on:
+  push:
+    branches:
+      - main
+      - "feat/**"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+      STRIPE_SECRET_KEY: test-stripe-key
+      STRIPE_WEBHOOK_SECRET: test-webhook-key
+      NEXT_PUBLIC_SITE_URL: https://escale.example
+      NEXT_PUBLIC_PAY_BY_BANK_ENABLED: "false"
+      CRON_SECRET: ci-test-secret
+      ANTHROPIC_API_KEY: test-key
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Financial tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
