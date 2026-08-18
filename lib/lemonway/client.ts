@@ -181,7 +181,6 @@ export type P2PInput = {
   userAgent?: string;
 };
 
-/** Ventilation interne entre deux Payment Accounts Lemonway. */
 export async function createP2P(input: P2PInput): Promise<{ id: string; raw: any }> {
   const token = await getAccessToken();
   const res = await fetch(`${directKitBaseUrl()}/v2/p2p`, {
@@ -219,7 +218,6 @@ export type MoneyOutInput = {
   userAgent?: string;
 };
 
-/** Reverse un Payment Account Lemonway vers l'IBAN validé du bénéficiaire. */
 export async function createMoneyOut(input: MoneyOutInput): Promise<{ id: string; raw: any }> {
   const token = await getAccessToken();
   const body: Record<string, unknown> = {
@@ -251,7 +249,6 @@ export async function createMoneyOut(input: MoneyOutInput): Promise<{ id: string
   return { id, raw: data };
 }
 
-/** Recherche un Money-Out par référence pour rendre les relances idempotentes. */
 export async function findMoneyOutByReference(reference: string): Promise<any | null> {
   const token = await getAccessToken();
   const url = new URL(`${directKitBaseUrl()}/v2/moneyouts`);
@@ -267,4 +264,72 @@ export async function findMoneyOutByReference(reference: string): Promise<any | 
   if (!res.ok) throw new Error(`Recherche Money-Out Lemonway impossible (${res.status})`);
   const tx = data?.transactions?.value?.[0] ?? data?.transactions?.[0] ?? data?.moneyOuts?.[0] ?? null;
   return tx ?? null;
+}
+
+export type LemonwayPayoutReadiness = {
+  accountId: string;
+  kycStatus: number | null;
+  ibanId: number | null;
+  ibanStatus: string | null;
+  onboardingComplete: boolean;
+  payoutEnabled: boolean;
+  rawAccount: any;
+  rawIbans: any;
+};
+
+/**
+ * Relit les données de paiement chez Lemonway au lieu de faire confiance à un
+ * statut local. Les statuts exacts autorisés pour Money-Out restent soumis à
+ * la configuration contractuelle de l'environnement ; par défaut, KYC2/KYC3
+ * (6/7) sont considérés comme suffisamment avancés et l'IBAN doit être actif.
+ */
+export async function retrievePayoutReadiness(accountId: string): Promise<LemonwayPayoutReadiness> {
+  const token = await getAccessToken();
+  const headers = psuHeaders(token, "127.0.0.1", "Escale KYC sync");
+
+  const [accountRes, ibanRes] = await Promise.all([
+    fetch(`${directKitBaseUrl()}/v2/accounts/${encodeURIComponent(accountId)}`, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    }),
+    fetch(`${directKitBaseUrl()}/v2/moneyouts/${encodeURIComponent(accountId)}/iban`, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    }),
+  ]);
+
+  const accountData = await accountRes.json().catch(() => ({}));
+  const ibanData = await ibanRes.json().catch(() => ({}));
+  if (!accountRes.ok) throw new Error(`Lecture compte Lemonway impossible (${accountRes.status})`);
+  if (!ibanRes.ok && ibanRes.status !== 404) throw new Error(`Lecture IBAN Lemonway impossible (${ibanRes.status})`);
+
+  const account = accountData?.account ?? accountData?.wallet ?? accountData;
+  const kycRaw = account?.status ?? account?.kycStatus ?? account?.walletStatus ?? null;
+  const kycStatus = kycRaw == null ? null : Number(kycRaw);
+
+  const ibanCandidates = ibanData?.ibans?.value ?? ibanData?.ibans ?? ibanData?.iban ? [ibanData?.iban].filter(Boolean) : [];
+  const normalizedIbans = Array.isArray(ibanCandidates) ? ibanCandidates : [];
+  const activeIban = normalizedIbans.find((i: any) => {
+    const s = String(i?.status ?? i?.ibanStatus ?? "").toLowerCase();
+    return ["5", "6", "validated", "valid", "accepted", "active"].includes(s);
+  }) ?? normalizedIbans[0] ?? null;
+
+  const ibanIdRaw = activeIban?.id ?? activeIban?.ibanId ?? activeIban?.ID ?? null;
+  const ibanId = ibanIdRaw == null ? null : Number(ibanIdRaw);
+  const ibanStatus = activeIban?.status == null ? null : String(activeIban.status);
+  const onboardingComplete = [6, 7].includes(kycStatus ?? -1);
+  const payoutEnabled = onboardingComplete && ibanId != null;
+
+  return {
+    accountId,
+    kycStatus,
+    ibanId,
+    ibanStatus,
+    onboardingComplete,
+    payoutEnabled,
+    rawAccount: accountData,
+    rawIbans: ibanData,
+  };
 }
