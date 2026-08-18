@@ -10,6 +10,8 @@
     "test": "node --test tests/**/*.test.mjs",
     "test:finance": "node --test tests/finance/*.test.mjs",
     "test:payments": "node --test tests/payments/*.test.mjs",
+    "demo:seed": "node scripts/demo-seed.mjs",
+    "demo:cleanup": "node scripts/demo-cleanup.mjs",
     "generer:cgu": "node scripts/generer-cgu-pdf.mjs",
     "publier:document": "node scripts/publier-document.mjs"
   },
