@@ -1,0 +1,13 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+
+const euro=c=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"}).format((c||0)/100);
+const fmt=d=>d?new Date(d).toLocaleDateString("fr-FR"):"—";
+
+export default async function PaiementsCrmPage(){
+ const supabase=createClient(); const {data:{user}}=await supabase.auth.getUser(); if(!user) redirect("/connexion?suite=/hote/crm/paiements");
+ const {data:payments}=await supabase.from("payments").select("id,reservation_id,status,amount_total,amount_host,platform_fee,partner_fee,tourist_tax_held,payment_provider,payment_channel,transferred_at,created_at,payout_last_error").eq("host_id",user.id).order("created_at",{ascending:false}).limit(100);
+ const pending=(payments||[]).filter(p=>p.status==='succeeded'&&!p.transferred_at).reduce((s,p)=>s+(p.amount_host||0),0); const paid=(payments||[]).filter(p=>p.transferred_at).reduce((s,p)=>s+(p.amount_host||0),0);
+ return <main className="min-h-screen bg-[#F7F5F0] p-5 md:p-8"><div className="mx-auto max-w-6xl"><Link href="/hote/crm" className="text-sm text-[#2F6E6E]">← CRM</Link><h1 className="mt-2 text-3xl font-semibold text-[#1B3A3A]">Centre des paiements</h1><p className="text-stone-500">Suivi des encaissements et reversements hôte.</p><section className="mt-6 grid gap-3 md:grid-cols-2"><div className="rounded-2xl bg-white border border-stone-200 p-5"><p className="text-xs uppercase text-stone-500">À recevoir</p><p className="mt-2 text-2xl font-semibold text-[#1B3A3A]">{euro(pending)}</p></div><div className="rounded-2xl bg-white border border-stone-200 p-5"><p className="text-xs uppercase text-stone-500">Déjà versé</p><p className="mt-2 text-2xl font-semibold text-[#1B3A3A]">{euro(paid)}</p></div></section><section className="mt-6 rounded-2xl bg-white border border-stone-200 p-5"><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="text-left text-stone-500"><tr><th className="pb-3">Date</th><th>Réservation</th><th>Canal</th><th>Net hôte</th><th>Statut</th></tr></thead><tbody className="divide-y">{(payments||[]).map(p=><tr key={p.id}><td className="py-3">{fmt(p.created_at)}</td><td><Link href={`/hote/crm/reservations/${p.reservation_id}`} className="text-[#2F6E6E]">Voir la réservation</Link></td><td>{p.payment_provider} • {p.payment_channel}</td><td><b>{euro(p.amount_host)}</b></td><td>{p.transferred_at?'Versé ✓':p.status==='succeeded'?'Fonds sécurisés':'En attente'}{p.payout_last_error&&<div className="text-xs text-amber-700">À vérifier</div>}</td></tr>)}</tbody></table>{!(payments||[]).length&&<p className="py-8 text-center text-stone-400">Aucun paiement enregistré.</p>}</div></section></div></main>;
+}

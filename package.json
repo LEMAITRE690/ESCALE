@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "node --test tests/**/*.test.mjs",
+    "test:finance": "node --test tests/finance/*.test.mjs",
+    "test:payments": "node --test tests/payments/*.test.mjs",
     "generer:cgu": "node scripts/generer-cgu-pdf.mjs",
     "publier:document": "node scripts/publier-document.mjs"
   },
