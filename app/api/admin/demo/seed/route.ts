@@ -6,10 +6,12 @@ const HOST_EMAIL="demo.hote@escale.local";
 const GUESTS=[['demo.camille@escale.local','Camille Martin'],['demo.thomas@escale.local','Thomas Renard'],['demo.julie@escale.local','Julie Bernard'],['demo.nora@escale.local','Nora Petit']] as const;
 const iso=(n:number)=>{const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
 
-async function ensureUser(email:string,fullName:string,role='voyageur',password?:string){
+type DemoUser={id:string;email?:string|null};
+async function ensureUser(email:string,fullName:string,role='voyageur',password?:string):Promise<DemoUser>{
  const {data,error}=await supabaseAdmin.auth.admin.listUsers({perPage:1000}); if(error) throw error;
- let user=data.users.find(u=>u.email===email);
- if(!user){const made=await supabaseAdmin.auth.admin.createUser({email,password:password||crypto.randomUUID()+"Aa1!",email_confirm:true,user_metadata:{full_name:fullName,role}});if(made.error)throw made.error;user=made.data.user;}
+ const users=(data?.users??[]) as DemoUser[];
+ let user:DemoUser|undefined=users.find((u:DemoUser)=>u.email===email);
+ if(!user){const made=await supabaseAdmin.auth.admin.createUser({email,password:password||crypto.randomUUID()+"Aa1!",email_confirm:true,user_metadata:{full_name:fullName,role}});if(made.error)throw made.error;user=made.data.user as DemoUser;}
  await supabaseAdmin.from('profiles').update({full_name:fullName,role}).eq('id',user.id); return user;
 }
 
@@ -19,7 +21,7 @@ export async function POST(){
   const adminEmail=process.env.DEMO_ADMIN_EMAIL?.toLowerCase();
   if(!user?.email||!adminEmail||user.email.toLowerCase()!==adminEmail) return NextResponse.json({error:"Accès administrateur requis."},{status:403});
   const password=process.env.DEMO_PASSWORD; if(!password) return NextResponse.json({error:"DEMO_PASSWORD n'est pas configuré côté serveur."},{status:503});
-  const host=await ensureUser(HOST_EMAIL,'Alexandre Démo','hote',password); const guests=[];
+  const host=await ensureUser(HOST_EMAIL,'Alexandre Démo','hote',password); const guests:DemoUser[]=[];
   for(const [e,n] of GUESTS) guests.push(await ensureUser(e,n));
   const {data:old}=await supabaseAdmin.from('listings').select('id').eq('host_id',host.id).like('title','[DEMO]%'); const oldIds=(old||[]).map(x=>x.id);
   if(oldIds.length) await supabaseAdmin.from('listings').delete().in('id',oldIds);
