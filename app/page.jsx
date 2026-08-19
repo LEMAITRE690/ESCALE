@@ -3,8 +3,8 @@
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowRight, BarChart3, Calendar, Check, ChevronDown, FileText,
-  LayoutDashboard, Lock, Menu, MessageCircle, Percent, ShieldCheck,
+  ArrowRight, BarChart3, Check, ChevronDown, FileText,
+  LayoutDashboard, Lock, Menu, MessageCircle, ShieldCheck,
   Sparkles, Users, Wallet, X, Zap
 } from "lucide-react";
 import {
@@ -45,6 +45,10 @@ const faq = [
     r: `Escale Pro ne se limite pas à une commission réduite à ${formatTaux(SUBSCRIPTION_RATE_TTC)} TTC. Il ajoute le CRM, le pilotage financier, les outils de gestion, les automatisations, le suivi client et les fonctions avancées destinées aux propriétaires qui veulent structurer leur activité.`,
   },
   {
+    q: "Pourquoi proposer un tarif plus bas sur Escale ?",
+    r: "Une partie de l’économie réalisée sur les frais de plateforme peut être partagée avec le voyageur. Vous pouvez ainsi afficher un tarif plus attractif tout en vérifiant, grâce au simulateur, que votre revenu net reste supérieur.",
+  },
+  {
     q: "Quand l’hôte reçoit-il son argent ?",
     r: "Le système est conçu pour déclencher le reversement après le séjour selon les règles de sécurité prévues et en l’absence de litige bloquant.",
   },
@@ -54,20 +58,53 @@ const faq = [
   },
 ];
 
+const euros = (value) => new Intl.NumberFormat("fr-FR", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
+}).format(value);
+
 export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(0);
-  const [monthlyBookings, setMonthlyBookings] = useState(2500);
+  const [annualBookings, setAnnualBookings] = useState(30000);
+  const [competitorRate, setCompetitorRate] = useState(15);
+  const [travelerDiscount, setTravelerDiscount] = useState(5);
+  const [formula, setFormula] = useState("pro");
 
   const simulation = useMemo(() => {
-    const essentiel = monthlyBookings * COMMISSION_RATE_TTC;
-    const pro = SUBSCRIPTION_FEE_TTC + monthlyBookings * SUBSCRIPTION_RATE_TTC;
+    const competitorRateDecimal = competitorRate / 100;
+    const discountDecimal = travelerDiscount / 100;
+    const escaleBookings = annualBookings * (1 - discountDecimal);
+    const competitorFees = annualBookings * competitorRateDecimal;
+    const competitorNet = annualBookings - competitorFees;
+
+    const essentielFees = escaleBookings * COMMISSION_RATE_TTC;
+    const essentielNet = escaleBookings - essentielFees;
+    const proFees = escaleBookings * SUBSCRIPTION_RATE_TTC + SUBSCRIPTION_FEE_TTC * 12;
+    const proNet = escaleBookings - proFees;
+
+    const selectedFees = formula === "pro" ? proFees : essentielFees;
+    const selectedNet = formula === "pro" ? proNet : essentielNet;
+    const travelerSaving = annualBookings - escaleBookings;
+    const hostGain = selectedNet - competitorNet;
+    const proExtraGain = proNet - essentielNet;
+
     return {
-      essentiel,
-      pro,
-      annualSaving: Math.max(0, (essentiel - pro) * 12),
+      escaleBookings,
+      competitorFees,
+      competitorNet,
+      essentielFees,
+      essentielNet,
+      proFees,
+      proNet,
+      selectedFees,
+      selectedNet,
+      travelerSaving,
+      hostGain,
+      proExtraGain,
     };
-  }, [monthlyBookings]);
+  }, [annualBookings, competitorRate, travelerDiscount, formula]);
 
   return (
     <main className="min-h-screen bg-[#F8F4EC] text-[#173C3A]">
@@ -80,8 +117,8 @@ export default function LandingPage() {
           <nav className="hidden items-center gap-7 text-sm text-[#6D6258] md:flex">
             <a href="#offres">Nos offres</a>
             <a href="#pro">Escale Pro</a>
-            <a href="#securite">Sécurité</a>
             <a href="#simulateur">Simulateur</a>
+            <a href="#securite">Sécurité</a>
           </nav>
           <div className="hidden items-center gap-3 md:flex">
             <Link href="/connexion" className="text-sm text-[#6D6258]">Se connecter</Link>
@@ -96,6 +133,7 @@ export default function LandingPage() {
             <div className="flex flex-col gap-3 text-sm">
               <a href="#offres" onClick={() => setMenuOpen(false)}>Nos offres</a>
               <a href="#pro" onClick={() => setMenuOpen(false)}>Escale Pro</a>
+              <a href="#simulateur" onClick={() => setMenuOpen(false)}>Simulateur</a>
               <a href="#securite" onClick={() => setMenuOpen(false)}>Sécurité</a>
               <Link href="/hote" className="mt-2 rounded-xl bg-[#173C3A] px-4 py-3 text-center text-white">Devenir hôte</Link>
             </div>
@@ -116,7 +154,7 @@ export default function LandingPage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <a href="#offres" className="inline-flex items-center gap-2 rounded-xl bg-[#173C3A] px-5 py-3 font-medium text-white">Comparer les offres <ArrowRight size={16}/></a>
-            <Link href="/hote" className="rounded-xl border border-[#CCB999] px-5 py-3 font-medium">Publier mon logement</Link>
+            <a href="#simulateur" className="rounded-xl border border-[#CCB999] px-5 py-3 font-medium">Simuler mes économies</a>
           </div>
           <div className="mt-8 flex flex-wrap gap-5 text-sm text-[#6D6258]">
             <span className="flex items-center gap-2"><ShieldCheck size={16}/> Paiement sécurisé</span>
@@ -132,7 +170,7 @@ export default function LandingPage() {
           </div>
           <div className="mt-8 grid grid-cols-2 gap-3">
             {[['CA du mois','8 420 €'],['À recevoir','2 180 €'],['Arrivées','3 aujourd’hui'],['Clients CRM','148']].map(([l,v]) => (
-              <div key={l} className="rounded-2xl bg-white/8 p-4"><p className="text-xs text-[#BFD0CD]">{l}</p><p className="mt-2 text-xl font-semibold">{v}</p></div>
+              <div key={l} className="rounded-2xl bg-white/10 p-4"><p className="text-xs text-[#BFD0CD]">{l}</p><p className="mt-2 text-xl font-semibold">{v}</p></div>
             ))}
           </div>
           <div className="mt-4 rounded-2xl bg-[#244E4B] p-4">
@@ -183,17 +221,63 @@ export default function LandingPage() {
       </section>
 
       <section id="simulateur" className="bg-[#EFE6D7] py-16">
-        <div className="mx-auto grid max-w-7xl gap-10 px-5 lg:grid-cols-[.9fr_1.1fr]">
-          <div><p className="text-sm font-medium uppercase tracking-[.15em] text-[#A86735]">Simulateur</p><h2 className="mt-3 font-serif text-4xl">À partir de quand Pro devient-il intéressant ?</h2><p className="mt-4 leading-7 text-[#6D6258]">Déplacez le curseur selon votre volume mensuel de réservations. Le calcul utilise automatiquement la grille tarifaire actuelle d’Escale.</p></div>
-          <div className="rounded-3xl bg-white p-7">
-            <label className="text-sm font-medium" htmlFor="volume">Réservations mensuelles : {monthlyBookings.toLocaleString('fr-FR')} €</label>
-            <input id="volume" type="range" min="200" max="10000" step="100" value={monthlyBookings} onChange={e=>setMonthlyBookings(Number(e.target.value))} className="mt-4 w-full"/>
-            <div className="mt-7 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl bg-[#F8F4EC] p-4"><p className="text-xs text-[#6D6258]">Essentiel / mois</p><p className="mt-1 text-2xl font-semibold">{simulation.essentiel.toFixed(0)} €</p></div>
-              <div className="rounded-2xl bg-[#173C3A] p-4 text-white"><p className="text-xs text-[#C8D8D4]">Pro / mois</p><p className="mt-1 text-2xl font-semibold">{simulation.pro.toFixed(0)} €</p></div>
-              <div className="rounded-2xl bg-[#F3E7D6] p-4"><p className="text-xs text-[#6D6258]">Économie annuelle*</p><p className="mt-1 text-2xl font-semibold">{simulation.annualSaving.toFixed(0)} €</p></div>
+        <div className="mx-auto max-w-7xl px-5">
+          <div className="max-w-3xl">
+            <p className="text-sm font-medium uppercase tracking-[.15em] text-[#A86735]">Simulateur commercial</p>
+            <h2 className="mt-3 font-serif text-4xl">Soyez moins cher pour le voyageur, sans sacrifier votre revenu.</h2>
+            <p className="mt-4 leading-7 text-[#6D6258]">Comparez votre plateforme actuelle à Escale. Par défaut, le simulateur applique un tarif Escale inférieur de 5 % pour rendre votre offre plus attractive, puis mesure ce qu’il vous reste réellement.</p>
+          </div>
+
+          <div className="mt-9 grid gap-6 lg:grid-cols-[.9fr_1.1fr]">
+            <div className="rounded-3xl bg-white p-6 md:p-7">
+              <p className="text-sm font-semibold">1. Choisissez votre formule Escale</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setFormula("essentiel")} className={`rounded-xl border px-4 py-3 text-left ${formula === "essentiel" ? "border-[#173C3A] bg-[#E8F0ED]" : "border-[#DDD1BC]"}`}>
+                  <span className="block text-sm font-semibold">Essentiel</span>
+                  <span className="text-xs text-[#6D6258]">{formatTaux(COMMISSION_RATE_TTC)} TTC, sans abonnement</span>
+                </button>
+                <button type="button" onClick={() => setFormula("pro")} className={`rounded-xl border px-4 py-3 text-left ${formula === "pro" ? "border-[#173C3A] bg-[#E8F0ED]" : "border-[#DDD1BC]"}`}>
+                  <span className="block text-sm font-semibold">Pro</span>
+                  <span className="text-xs text-[#6D6258]">{formatTaux(SUBSCRIPTION_RATE_TTC)} TTC + {formatEuros(SUBSCRIPTION_FEE_TTC)}/mois</span>
+                </button>
+              </div>
+
+              <label className="mt-6 block text-sm font-medium" htmlFor="annualBookings">Votre volume annuel actuel : {euros(annualBookings)}</label>
+              <input id="annualBookings" type="range" min="5000" max="200000" step="1000" value={annualBookings} onChange={e => setAnnualBookings(Number(e.target.value))} className="mt-3 w-full"/>
+
+              <label className="mt-6 block text-sm font-medium" htmlFor="competitorRate">Frais de votre plateforme actuelle : {competitorRate} %</label>
+              <input id="competitorRate" type="range" min="5" max="25" step="0.5" value={competitorRate} onChange={e => setCompetitorRate(Number(e.target.value))} className="mt-3 w-full"/>
+
+              <label className="mt-6 block text-sm font-medium" htmlFor="travelerDiscount">Tarif Escale moins cher pour le voyageur : {travelerDiscount} %</label>
+              <input id="travelerDiscount" type="range" min="0" max="10" step="0.5" value={travelerDiscount} onChange={e => setTravelerDiscount(Number(e.target.value))} className="mt-3 w-full"/>
+              <p className="mt-2 text-xs leading-5 text-[#7B7066]">5 % est notre hypothèse commerciale de départ. Le curseur reste libre pour tester votre propre stratégie tarifaire.</p>
             </div>
-            <p className="mt-4 text-xs text-[#7B7066]">* Comparaison tarifaire indicative, hors coûts éventuels liés aux moyens de paiement et options spécifiques.</p>
+
+            <div className="rounded-3xl bg-[#173C3A] p-6 text-white md:p-7">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div><p className="text-sm text-[#C8D8D4]">Résultat annuel estimé</p><h3 className="mt-1 text-2xl font-semibold">Votre marge, après partage de l’économie</h3></div>
+                <span className="rounded-full bg-white/10 px-3 py-1 text-xs">Escale {formula === "pro" ? "Pro" : "Essentiel"}</span>
+              </div>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl bg-white/10 p-4"><p className="text-xs text-[#C8D8D4]">Revenu net plateforme actuelle</p><p className="mt-1 text-2xl font-semibold">{euros(simulation.competitorNet)}</p><p className="mt-1 text-xs text-[#C8D8D4]">Frais estimés : {euros(simulation.competitorFees)}</p></div>
+                <div className="rounded-2xl bg-white p-4 text-[#173C3A]"><p className="text-xs text-[#6D6258]">Revenu net avec Escale</p><p className="mt-1 text-2xl font-semibold">{euros(simulation.selectedNet)}</p><p className="mt-1 text-xs text-[#6D6258]">Frais Escale : {euros(simulation.selectedFees)}</p></div>
+                <div className="rounded-2xl bg-[#244E4B] p-4"><p className="text-xs text-[#C8D8D4]">Économie offerte aux voyageurs</p><p className="mt-1 text-2xl font-semibold">{euros(simulation.travelerSaving)}</p><p className="mt-1 text-xs text-[#C8D8D4]">sur le volume annuel simulé</p></div>
+                <div className={`rounded-2xl p-4 ${simulation.hostGain >= 0 ? "bg-[#D99054]" : "bg-[#6E4438]"}`}><p className="text-xs text-white/80">Gain net pour l’hôte</p><p className="mt-1 text-2xl font-semibold">{simulation.hostGain >= 0 ? "+" : ""}{euros(simulation.hostGain)}</p><p className="mt-1 text-xs text-white/80">après la remise voyageur</p></div>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-white/15 p-4 text-sm leading-6">
+                {simulation.hostGain >= 0 ? (
+                  <p><strong>Le voyageur paie moins et vous conservez plus.</strong> Dans cette simulation, vous baissez votre prix de {travelerDiscount} % tout en améliorant votre revenu net annuel de {euros(simulation.hostGain)}.</p>
+                ) : (
+                  <p><strong>Cette remise est trop forte pour ces paramètres.</strong> Réduisez légèrement la remise voyageur, choisissez Pro ou ajustez le taux de frais de votre plateforme actuelle.</p>
+                )}
+                {formula === "essentiel" && simulation.proExtraGain > 0 && (
+                  <p className="mt-3 text-[#F7D5B8]">À ce niveau d’activité, passer à <strong>Escale Pro</strong> ajouterait encore environ {euros(simulation.proExtraGain)} de revenu net par an, avec les outils CRM et de pilotage inclus.</p>
+                )}
+              </div>
+              <p className="mt-4 text-xs leading-5 text-[#BFD0CD]">Simulation indicative fondée sur les paramètres renseignés. Les frais et modèles tarifaires des plateformes concurrentes peuvent varier. Les coûts spécifiques de moyens de paiement ou options ne sont pas inclus dans cette comparaison.</p>
+            </div>
           </div>
         </div>
       </section>
