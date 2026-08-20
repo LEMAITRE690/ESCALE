@@ -1,9 +1,7 @@
 // app/layout.tsx
-// Extrait à fusionner avec votre layout existant : ajoute les balises
-// nécessaires pour que le navigateur propose "Installer Escale" (iOS,
-// Android, desktop) et affiche la bonne icône/couleur au lancement.
 
 import "./globals.css";
+import Link from "next/link";
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
@@ -34,7 +32,16 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Link
+          href="/voyageurs"
+          aria-label="Accéder à l'espace voyageurs"
+          className="fixed bottom-5 right-5 z-50 rounded-full border border-[#D9C6A7] bg-[#F8F4EC] px-5 py-3 text-sm font-semibold text-[#173C3A] shadow-lg transition hover:-translate-y-0.5 hover:bg-white"
+        >
+          Je suis voyageur →
+        </Link>
+      </body>
     </html>
   );
 }

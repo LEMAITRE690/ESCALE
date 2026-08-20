@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { BadgeEuro, ShieldCheck } from "lucide-react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import DetailLogementClient from "@/components/DetailLogementClient";
@@ -27,8 +29,6 @@ function versLogement(l) {
     evenementsAutorises: !!l.events_allowed,
     enfantsBienvenus: !!l.children_welcome,
     reservationInstantanee: !!l.instant_booking,
-    // Horaires standards d'arrivée/départ : non stockés en base (seuls les
-    // horaires *tardifs/anticipés* le sont) — valeurs par défaut affichées.
     heureArrivee: "15:00",
     heureDepart: "11:00",
     departTardif: !!l.late_checkout_available,
@@ -40,9 +40,10 @@ function versLogement(l) {
     hote: {
       nom: l.profiles?.full_name || "Hôte Escale",
       depuis: anneeCreation,
-      tempsReponse: "quelques heures", // non mesuré pour l'instant, valeur générique
+      tempsReponse: "quelques heures",
     },
     photos: Array.isArray(l.photo_urls) && l.photo_urls.length > 0 ? l.photo_urls.length : 1,
+    prixJuste: !!l.fair_price_charter,
   };
 }
 
@@ -66,9 +67,7 @@ export default async function PageDetailLogement({ params }) {
     .eq("status", "actif")
     .single();
 
-  if (error || !ligne) {
-    notFound();
-  }
+  if (error || !ligne) notFound();
 
   const { data: avis } = await supabase
     .from("reviews")
@@ -77,5 +76,20 @@ export default async function PageDetailLogement({ params }) {
     .order("created_at", { ascending: false })
     .limit(20);
 
-  return <DetailLogementClient logement={versLogement(ligne)} avisListe={versAvis(avis)} />;
+  return (
+    <>
+      {ligne.fair_price_charter && (
+        <div className="border-b border-[#D7CCB9] bg-[#F1E7D6]">
+          <div className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-[#173C3A] text-white"><BadgeEuro size={18}/></span>
+              <div><p className="font-semibold text-[#173C3A]">Prix Juste Escale</p><p className="text-sm text-[#6B5B4D]">Cet hôte déclare proposer sur Escale un tarif au moins 5 % plus avantageux que sur les plateformes traditionnelles, à conditions comparables.</p></div>
+            </div>
+            <Link href="/charte-prix-juste" className="inline-flex items-center gap-1.5 text-sm font-medium text-[#173C3A] underline underline-offset-4"><ShieldCheck size={14}/> Comprendre l’engagement</Link>
+          </div>
+        </div>
+      )}
+      <DetailLogementClient logement={versLogement(ligne)} avisListe={versAvis(avis)} />
+    </>
+  );
 }
