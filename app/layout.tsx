@@ -34,13 +34,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr">
       <body>
         {children}
-        <Link
-          href="/voyageurs"
-          aria-label="Accéder à l'espace voyageurs"
-          className="fixed bottom-5 right-5 z-50 rounded-full border border-[#D9C6A7] bg-[#F8F4EC] px-5 py-3 text-sm font-semibold text-[#173C3A] shadow-lg transition hover:-translate-y-0.5 hover:bg-white"
-        >
-          Je suis voyageur →
-        </Link>
+        <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2 sm:flex-row">
+          <Link
+            href="/demo"
+            aria-label="Tester la démonstration Escale"
+            className="rounded-full bg-[#A86735] px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-[#8f552a]"
+          >
+            Tester la démo →
+          </Link>
+          <Link
+            href="/voyageurs"
+            aria-label="Accéder à l'espace voyageurs"
+            className="rounded-full border border-[#D9C6A7] bg-[#F8F4EC] px-5 py-3 text-sm font-semibold text-[#173C3A] shadow-lg transition hover:-translate-y-0.5 hover:bg-white"
+          >
+            Je suis voyageur →
+          </Link>
+        </div>
       </body>
     </html>
   );
