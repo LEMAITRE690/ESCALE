@@ -3,7 +3,7 @@
 import React, { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Mail, Lock, ArrowRight, AlertCircle } from "lucide-react";
+import { Mail, Lock, ArrowRight, AlertCircle, PlayCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 function PageConnexionContent() {
@@ -31,11 +31,7 @@ function PageConnexionContent() {
     setChargement(false);
 
     if (error) {
-      setErreur(
-        error.message === "Invalid login credentials"
-          ? "E-mail ou mot de passe incorrect."
-          : "Une erreur est survenue. Réessayez."
-      );
+      setErreur(error.message === "Invalid login credentials" ? "E-mail ou mot de passe incorrect." : "Une erreur est survenue. Réessayez.");
       return;
     }
 
@@ -47,9 +43,7 @@ function PageConnexionContent() {
     <div className="min-h-screen bg-[#F8F4EC] font-sans flex items-center justify-center px-5 py-12">
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-2 justify-center mb-8">
-          <div className="w-8 h-8 rounded-lg bg-[#1B3A3A] flex items-center justify-center">
-            <span className="font-serif text-sm text-[#C97B3D]">E</span>
-          </div>
+          <div className="w-8 h-8 rounded-lg bg-[#1B3A3A] flex items-center justify-center"><span className="font-serif text-sm text-[#C97B3D]">E</span></div>
           <span className="font-serif text-lg text-[#1B3A3A]">Escale</span>
         </div>
 
@@ -57,71 +51,25 @@ function PageConnexionContent() {
           <h1 className="font-serif text-xl text-[#1B3A3A] mb-1">Se connecter</h1>
           <p className="text-sm text-[#8C7A66] mb-6">Accédez à votre espace Escale.</p>
 
-          {erreur && (
-            <div className="flex items-start gap-2 text-xs text-[#7A2E1F] bg-[#F6DEDA] rounded-lg px-3 py-2.5 mb-4">
-              <AlertCircle size={14} className="shrink-0 mt-0.5" /> {erreur}
-            </div>
-          )}
+          {erreur && <div className="flex items-start gap-2 text-xs text-[#7A2E1F] bg-[#F6DEDA] rounded-lg px-3 py-2.5 mb-4"><AlertCircle size={14} className="shrink-0 mt-0.5" /> {erreur}</div>}
 
           <form onSubmit={seConnecter} className="space-y-3.5">
-            <div>
-              <label className="block text-xs font-medium text-[#1B3A3A] mb-1.5">E-mail</label>
-              <div className="flex items-center gap-2 border border-[#E4DCC8] rounded-lg px-3 py-2.5 bg-[#F8F4EC]">
-                <Mail size={14} className="text-[#8C7A66] shrink-0" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="vous@exemple.com"
-                  className="w-full bg-transparent text-sm focus:outline-none text-[#1B3A3A] placeholder:text-[#B0A48F]"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-medium text-[#1B3A3A]">Mot de passe</label>
-                <Link href="/mot-de-passe-oublie" className="text-xs text-[#2F6E6E] hover:text-[#1B3A3A] transition-colors">
-                  Oublié ?
-                </Link>
-              </div>
-              <div className="flex items-center gap-2 border border-[#E4DCC8] rounded-lg px-3 py-2.5 bg-[#F8F4EC]">
-                <Lock size={14} className="text-[#8C7A66] shrink-0" />
-                <input
-                  type="password"
-                  value={motDePasse}
-                  onChange={(e) => setMotDePasse(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-transparent text-sm focus:outline-none text-[#1B3A3A] placeholder:text-[#B0A48F]"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={chargement}
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-[#1B3A3A] text-[#F8F4EC] text-sm font-medium hover:bg-[#2F6E6E] transition-colors disabled:opacity-50 mt-2"
-            >
-              {chargement ? "Connexion..." : "Se connecter"} {!chargement && <ArrowRight size={14} />}
-            </button>
+            <div><label className="block text-xs font-medium text-[#1B3A3A] mb-1.5">E-mail</label><div className="flex items-center gap-2 border border-[#E4DCC8] rounded-lg px-3 py-2.5 bg-[#F8F4EC]"><Mail size={14} className="text-[#8C7A66] shrink-0" /><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@exemple.com" className="w-full bg-transparent text-sm focus:outline-none text-[#1B3A3A] placeholder:text-[#B0A48F]" /></div></div>
+            <div><div className="flex items-center justify-between mb-1.5"><label className="block text-xs font-medium text-[#1B3A3A]">Mot de passe</label><Link href="/mot-de-passe-oublie" className="text-xs text-[#2F6E6E] hover:text-[#1B3A3A] transition-colors">Oublié ?</Link></div><div className="flex items-center gap-2 border border-[#E4DCC8] rounded-lg px-3 py-2.5 bg-[#F8F4EC]"><Lock size={14} className="text-[#8C7A66] shrink-0" /><input type="password" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} placeholder="••••••••" className="w-full bg-transparent text-sm focus:outline-none text-[#1B3A3A] placeholder:text-[#B0A48F]" /></div></div>
+            <button type="submit" disabled={chargement} className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-[#1B3A3A] text-[#F8F4EC] text-sm font-medium hover:bg-[#2F6E6E] transition-colors disabled:opacity-50 mt-2">{chargement ? "Connexion..." : "Se connecter"} {!chargement && <ArrowRight size={14} />}</button>
           </form>
+
+          <div className="my-5 flex items-center gap-3"><div className="h-px flex-1 bg-[#E4DCC8]"/><span className="text-[11px] font-semibold uppercase tracking-wider text-[#9A8B78]">ou</span><div className="h-px flex-1 bg-[#E4DCC8]"/></div>
+          <Link href="/demo" className="w-full flex items-center justify-center gap-2 py-3 rounded-lg border border-[#C97B3D] bg-[#FFF8EE] text-[#1B3A3A] text-sm font-semibold hover:bg-[#F7E9D7] transition-colors"><PlayCircle size={17} className="text-[#C97B3D]"/> Tester Escale en mode démo</Link>
+          <p className="mt-2 text-center text-[11px] leading-relaxed text-[#8C7A66]">Sans compte, sans carte bancaire et sans réservation réelle.</p>
         </div>
 
-        <p className="text-center text-sm text-[#6B5B4D] mt-5">
-          Pas encore de compte ?{" "}
-          <Link href="/inscription" className="text-[#2F6E6E] hover:text-[#1B3A3A] font-medium transition-colors">
-            Créer un compte
-          </Link>
-        </p>
+        <p className="text-center text-sm text-[#6B5B4D] mt-5">Pas encore de compte ?{" "}<Link href="/inscription" className="text-[#2F6E6E] hover:text-[#1B3A3A] font-medium transition-colors">Créer un compte</Link></p>
       </div>
     </div>
   );
-  
-}export default function PageConnexion() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Chargement...</div>}>
-      <PageConnexionContent />
-    </Suspense>
-  );
 }
 
+export default function PageConnexion() {
+  return <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Chargement...</div>}><PageConnexionContent /></Suspense>;
+}
