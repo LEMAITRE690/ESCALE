@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
 
   let requete = supabase
     .from("listings")
-    .select("id, title, city, type, price_per_night, average_rating, review_count, guests, amenities, pets_allowed, instant_booking")
+    .select("id, title, city, type, price_per_night, average_rating, review_count, guests, amenities, pets_allowed, instant_booking, latitude, longitude")
     .eq("status", "actif");
 
   if (filtres.ville) requete = requete.ilike("city", `%${filtres.ville}%`);
