@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Mic, MicOff } from "lucide-react";
 
@@ -16,11 +16,6 @@ export default function RechercheIAVocale() {
   const [ecoute, setEcoute] = useState(false);
   const [message, setMessage] = useState("");
 
-  const SpeechRecognition = useMemo(() => {
-    if (typeof window === "undefined") return null;
-    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
-  }, []);
-
   useEffect(() => {
     function trouverCible() {
       const input = document.querySelector('input[placeholder^="Décrivez le logement"]');
@@ -33,11 +28,18 @@ export default function RechercheIAVocale() {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (!message) return undefined;
+    const timer = window.setTimeout(() => setMessage(""), 4500);
+    return () => window.clearTimeout(timer);
+  }, [message]);
+
   function demarrerEcoute() {
     setMessage("");
     const input = document.querySelector('input[placeholder^="Décrivez le logement"]');
     if (!input) return;
 
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setMessage("La dictée vocale n’est pas disponible sur ce navigateur. Vous pouvez toujours écrire votre demande.");
       input.focus();
@@ -57,8 +59,10 @@ export default function RechercheIAVocale() {
     recognition.onerror = (event) => {
       setEcoute(false);
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        setMessage("Autorisez le micro pour parler à l’IA.");
-      } else if (event.error !== "no-speech") {
+        setMessage("Autorisez le micro dans votre navigateur pour parler à l’IA.");
+      } else if (event.error === "no-speech") {
+        setMessage("Je n’ai rien entendu. Touchez le micro et parlez naturellement.");
+      } else {
         setMessage("Je n’ai pas pu vous entendre. Touchez le micro et réessayez.");
       }
     };
@@ -86,31 +90,45 @@ export default function RechercheIAVocale() {
       }
     };
 
-    recognition.start();
+    try {
+      recognition.start();
+    } catch {
+      setEcoute(false);
+      setMessage("Le micro est déjà actif. Parlez, ou réessayez dans un instant.");
+    }
   }
 
   if (!cible) return null;
 
-  return createPortal(
+  return (
     <>
-      <button
-        type="button"
-        onClick={demarrerEcoute}
-        disabled={ecoute}
-        aria-label={ecoute ? "Écoute en cours" : "Parler à l’IA"}
-        title={ecoute ? "Je vous écoute…" : "Parler à l’IA"}
-        className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
-          ecoute
-            ? "bg-[#C97B3D] text-white animate-pulse"
-            : "bg-[#E1EEE9] text-[#1B3A3A] hover:bg-[#CDE1D9]"
-        }`}
-      >
-        {ecoute ? <MicOff size={16} /> : <Mic size={16} />}
-      </button>
-      {message && (
-        <span className="sr-only" role="status" aria-live="polite">{message}</span>
+      {createPortal(
+        <button
+          type="button"
+          onClick={demarrerEcoute}
+          disabled={ecoute}
+          aria-label={ecoute ? "Écoute en cours" : "Parler à l’IA"}
+          title={ecoute ? "Je vous écoute…" : "Parler à l’IA"}
+          className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+            ecoute
+              ? "bg-[#C97B3D] text-white animate-pulse"
+              : "bg-[#E1EEE9] text-[#1B3A3A] hover:bg-[#CDE1D9]"
+          }`}
+        >
+          {ecoute ? <MicOff size={16} /> : <Mic size={16} />}
+        </button>,
+        cible
       )}
-    </>,
-    cible
+      {message && createPortal(
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed left-1/2 top-20 z-[80] max-w-[90vw] -translate-x-1/2 rounded-full bg-[#1B3A3A] px-4 py-2 text-center text-xs font-medium text-[#F8F4EC] shadow-lg"
+        >
+          {message}
+        </div>,
+        document.body
+      )}
+    </>
   );
 }
