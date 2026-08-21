@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import demoListings from "@/lib/demo/listings.json";
 
 const HOST_EMAIL="demo.hote@escale.local";
 const GUESTS=[['demo.camille@escale.local','Camille Martin'],['demo.thomas@escale.local','Thomas Renard'],['demo.julie@escale.local','Julie Bernard'],['demo.nora@escale.local','Nora Petit']] as const;
@@ -27,11 +28,16 @@ export async function POST(){
   if(oldIds.length) await supabaseAdmin.from('listings').delete().in('id',oldIds);
   await supabaseAdmin.from('host_expenses').delete().eq('host_id',host.id).eq('notes','ESCALE_DEMO');
   await supabaseAdmin.from('crm_contacts').delete().eq('host_id',host.id).contains('tags',['DEMO']);
-  const {data:listings,error:le}=await supabaseAdmin.from('listings').insert([
-   {host_id:host.id,title:'[DEMO] Villa des Embruns',type:'maison',description:'Villa lumineuse à deux pas de la mer.',guests:6,bedrooms:3,bathrooms:2,city:'La Rochelle',postal_code:'17000',price_per_night:245,cleaning_fee:85,status:'actif',children_welcome:true,instant_booking:true,photo_urls:[]},
-   {host_id:host.id,title:'[DEMO] Loft Vieux-Port',type:'appartement',description:'Loft central pour courts séjours.',guests:4,bedrooms:2,bathrooms:1,city:'Marseille',postal_code:'13001',price_per_night:175,cleaning_fee:65,status:'actif',instant_booking:true,photo_urls:[]},
-   {host_id:host.id,title:'[DEMO] Studio Bellecour',type:'studio',description:'Studio pratique au cœur de Lyon.',guests:2,bedrooms:1,bathrooms:1,city:'Lyon',postal_code:'69002',price_per_night:120,cleaning_fee:45,status:'actif',instant_booking:true,photo_urls:[]}
-  ]).select(); if(le)throw le; const [villa,loft,studio]=listings!;
+
+  const {data:listings,error:le}=await supabaseAdmin.from('listings').insert(
+    demoListings.map((listing)=>({ ...listing, host_id:host.id }))
+  ).select();
+  if(le)throw le;
+
+  const villa=listings!.find((l)=>l.title==='[DEMO] Villa des Embruns')!;
+  const loft=listings!.find((l)=>l.title==='[DEMO] Loft Vieux-Port')!;
+  const studio=listings!.find((l)=>l.title==='[DEMO] Appartement Bellecour')!;
+
   const {data:resas,error:re}=await supabaseAdmin.from('reservations').insert([
    {listing_id:villa.id,guest_id:guests[0].id,guest_first_name:'Camille',start_date:iso(-120),end_date:iso(-113),guests:4,amount_total:196000,status:'terminee'},
    {listing_id:villa.id,guest_id:guests[0].id,guest_first_name:'Camille',start_date:iso(-35),end_date:iso(-29),guests:4,amount_total:168000,status:'terminee'},
