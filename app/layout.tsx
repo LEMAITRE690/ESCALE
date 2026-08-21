@@ -3,6 +3,7 @@
 import "./globals.css";
 import Link from "next/link";
 import type { Metadata, Viewport } from "next";
+import RechercheIAVocale from "@/components/RechercheIAVocale";
 
 export const metadata: Metadata = {
   title: "Escale",
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr">
       <body>
         {children}
+        <RechercheIAVocale />
         <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2 sm:flex-row">
           <Link
             href="/demo"
