@@ -1,0 +1,23 @@
+# Dépendances
+/node_modules
+
+# Build Next.js
+/.next
+/out
+next-env.d.ts
+
+# Variables d'environnement (ne jamais committer de secrets)
+.env
+.env.local
+.env.*.local
+
+# PWA (généré par next-pwa)
+/public/sw.js
+/public/workbox-*.js
+/public/sw.js.map
+/public/workbox-*.js.map
+
+# Divers
+.DS_Store
+*.log
+.vercel
