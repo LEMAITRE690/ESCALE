@@ -1,0 +1,8 @@
+import { LifeBuoy, Clock3, MessageCircle, CheckCircle2 } from "lucide-react";
+const tickets=[
+ ["#SUP-2841","Arrivée impossible","Camille M.","Urgent","12 min","Ouvert"],
+ ["#SUP-2838","Question remboursement","Thomas R.","Haute","28 min","En cours"],
+ ["#SUP-2831","Modification d’annonce","Claire D.","Normale","1 h 04","Ouvert"],
+ ["#SUP-2826","Facture commission","Julien M.","Normale","2 h 18","En cours"],
+];
+export default function SupportPage(){return <main className="p-5 md:p-8"><div className="mx-auto max-w-7xl"><p className="text-sm text-[#2F6E6E]">Service utilisateurs</p><h1 className="font-serif text-3xl">Support</h1><p className="mt-2 text-sm text-[#6B5B4D]">Prioriser les demandes selon le séjour et le niveau d’urgence.</p><div className="mt-6 grid gap-3 sm:grid-cols-4">{[["Tickets ouverts","37",LifeBuoy],["Prioritaires","12",Clock3],["Temps moyen","46 min",MessageCircle],["Résolus aujourd’hui","64",CheckCircle2]].map(([l,v,I])=><div key={l} className="rounded-xl border border-[#E4DCC8] bg-white p-5"><I size={17}/><div className="mt-2 text-2xl font-semibold">{v}</div><div className="text-sm text-[#8C7A66]">{l}</div></div>)}</div><section className="mt-6 overflow-hidden rounded-2xl border border-[#E4DCC8] bg-white"><div className="grid grid-cols-[.8fr_1.6fr_1fr_.8fr_.8fr_.8fr] gap-3 border-b border-[#E4DCC8] bg-[#FFFDF8] px-5 py-3 text-xs text-[#8C7A66]"><span>ID</span><span>Sujet</span><span>Utilisateur</span><span>Priorité</span><span>Attente</span><span>Statut</span></div>{tickets.map(r=><div key={r[0]} className="grid grid-cols-[.8fr_1.6fr_1fr_.8fr_.8fr_.8fr] gap-3 border-b border-[#EFE8DB] px-5 py-4 text-sm last:border-0">{r.map((v,i)=><span key={i} className={i===1?"font-medium":""}>{v}</span>)}</div>)}</section></div></main>}
