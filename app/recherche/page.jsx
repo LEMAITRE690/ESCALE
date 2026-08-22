@@ -8,10 +8,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-
-// ---------------------------------------------------------------------------
-// Configuration des filtres (statique, ne dépend pas des données)
-// ---------------------------------------------------------------------------
+import CarteRechercheFrance from "@/components/CarteRechercheFrance";
 
 const TYPES = [
   { id: "appartement", label: "Appartement", icon: Building2 },
@@ -29,7 +26,6 @@ const EQUIPEMENTS = [
   { id: "piscine", label: "Piscine", icon: Waves },
 ];
 
-// Traduit une ligne `listings` (Supabase) vers la forme attendue par l'UI
 function depuisLigneSupabase(l) {
   return {
     id: l.id,
@@ -43,6 +39,8 @@ function depuisLigneSupabase(l) {
     equipements: Array.isArray(l.amenities) ? l.amenities : [],
     animaux: !!l.pets_allowed,
     instantanee: !!l.instant_booking,
+    latitude: l.latitude == null ? null : Number(l.latitude),
+    longitude: l.longitude == null ? null : Number(l.longitude),
   };
 }
 
@@ -52,10 +50,6 @@ const TRIS = [
   { id: "prix_decroissant", label: "Prix décroissant" },
   { id: "mieux_notes", label: "Mieux notés" },
 ];
-
-// ---------------------------------------------------------------------------
-// Composants
-// ---------------------------------------------------------------------------
 
 function CarteLogement({ logement, favori, onToggleFavori }) {
   return (
@@ -198,10 +192,6 @@ function PanneauFiltres({ filtres, setFiltres, onFermer }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Composant principal
-// ---------------------------------------------------------------------------
-
 export default function PageRecherche() {
   const [destination, setDestination] = useState("");
   const [voyageurs, setVoyageurs] = useState(2);
@@ -209,6 +199,7 @@ export default function PageRecherche() {
   const [triOuvert, setTriOuvert] = useState(false);
   const [filtresMobileOuverts, setFiltresMobileOuverts] = useState(false);
   const [favoris, setFavoris] = useState([]);
+  const [zoneCarte, setZoneCarte] = useState(null);
   const [filtres, setFiltres] = useState({
     prixMin: "", prixMax: "", types: [], equipements: [], animaux: false, instantanee: false,
   });
@@ -240,9 +231,8 @@ export default function PageRecherche() {
       }
       setLogements((data.resultats ?? []).map(depuisLigneSupabase));
       setResumeIA(data.filtres?.resume || "");
-      // La recherche IA prend la main sur l'affichage : on réinitialise les
-      // filtres classiques pour éviter qu'ils ne masquent ses résultats.
       setDestination("");
+      setZoneCarte(null);
       setFiltres({ prixMin: "", prixMax: "", types: [], equipements: [], animaux: false, instantanee: false });
     } catch {
       setErreurIA("Une erreur est survenue. Réessayez.");
@@ -259,7 +249,7 @@ export default function PageRecherche() {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("listings")
-        .select("id, title, city, type, price_per_night, average_rating, review_count, guests, amenities, pets_allowed, instant_booking")
+        .select("id, title, city, type, price_per_night, average_rating, review_count, guests, amenities, pets_allowed, instant_booking, latitude, longitude")
         .eq("status", "actif")
         .order("created_at", { ascending: false });
 
@@ -290,6 +280,11 @@ export default function PageRecherche() {
       if (filtres.equipements.length && !filtres.equipements.every((e) => l.equipements.includes(e))) return false;
       if (filtres.animaux && !l.animaux) return false;
       if (filtres.instantanee && !l.instantanee) return false;
+      if (zoneCarte) {
+        if (!Number.isFinite(l.latitude) || !Number.isFinite(l.longitude)) return false;
+        if (l.latitude < zoneCarte.south || l.latitude > zoneCarte.north) return false;
+        if (l.longitude < zoneCarte.west || l.longitude > zoneCarte.east) return false;
+      }
       return true;
     });
 
@@ -298,11 +293,10 @@ export default function PageRecherche() {
     if (tri === "mieux_notes") liste = [...liste].sort((a, b) => b.note - a.note);
 
     return liste;
-  }, [logements, destination, voyageurs, filtres, tri]);
+  }, [logements, destination, voyageurs, filtres, tri, zoneCarte]);
 
   return (
     <div className="min-h-screen bg-[#F8F4EC] font-sans">
-      {/* Recherche IA en langage naturel */}
       <div className="bg-[#1B3A3A]">
         <div className="max-w-6xl mx-auto px-5 py-4">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
@@ -335,7 +329,6 @@ export default function PageRecherche() {
         </div>
       </div>
 
-      {/* Barre de recherche */}
       <div className="border-b border-[#E4DCC8] bg-[#FFFDF8] sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-5 py-4">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
@@ -343,7 +336,7 @@ export default function PageRecherche() {
               <MapPin size={15} className="text-[#8C7A66] shrink-0" />
               <input
                 value={destination}
-                onChange={(e) => setDestination(e.target.value)}
+                onChange={(e) => { setDestination(e.target.value); setZoneCarte(null); }}
                 placeholder="Destination — ville, région..."
                 className="w-full bg-transparent text-sm focus:outline-none text-[#1B3A3A] placeholder:text-[#B0A48F]"
               />
@@ -354,12 +347,14 @@ export default function PageRecherche() {
             </div>
             <div className="flex items-center gap-2 border border-[#E4DCC8] rounded-lg px-3 py-2.5 bg-[#F8F4EC]">
               <Users size={15} className="text-[#8C7A66] shrink-0" />
-              <input
-                type="number" min={1}
+              <select
                 value={voyageurs}
-                onChange={(e) => setVoyageurs(Number(e.target.value) || 1)}
-                className="w-10 bg-transparent text-sm focus:outline-none text-[#1B3A3A]"
-              />
+                onChange={(e) => setVoyageurs(Number(e.target.value))}
+                className="bg-transparent text-sm focus:outline-none text-[#1B3A3A]"
+                aria-label="Nombre de voyageurs"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
             </div>
             <button className="flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-lg bg-[#1B3A3A] text-[#F8F4EC] text-sm font-medium hover:bg-[#2F6E6E] transition-colors">
               <Search size={15} /> Rechercher
@@ -369,10 +364,12 @@ export default function PageRecherche() {
       </div>
 
       <div className="max-w-6xl mx-auto px-5 py-6">
-        <div className="flex items-center justify-between mb-5">
+        <CarteRechercheFrance logements={resultats} onZoneChange={setZoneCarte} zoneActive={!!zoneCarte} />
+
+        <div className="flex items-center justify-between mt-6 mb-5">
           <p className="text-sm text-[#6B5B4D]">
             <span className="font-medium text-[#1B3A3A]">{resultats.length}</span> logement{resultats.length !== 1 ? "s" : ""}
-            {destination.trim() ? ` à ${destination}` : ""}
+            {destination.trim() ? ` à ${destination}` : zoneCarte ? " dans la zone de la carte" : " en France"}
           </p>
 
           <div className="flex items-center gap-2">
@@ -395,9 +392,7 @@ export default function PageRecherche() {
                     <button
                       key={t.id}
                       onClick={() => { setTri(t.id); setTriOuvert(false); }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-[#F1EADB] transition-colors ${
-                        tri === t.id ? "text-[#1B3A3A] font-medium" : "text-[#6B5B4D]"
-                      }`}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-[#F1EADB] transition-colors ${tri === t.id ? "text-[#1B3A3A] font-medium" : "text-[#6B5B4D]"}`}
                     >
                       {t.label}
                     </button>
@@ -426,10 +421,10 @@ export default function PageRecherche() {
               <div className="text-center py-16">
                 <p className="text-sm text-[#6B5B4D]">Aucun logement ne correspond à votre recherche.</p>
                 <button
-                  onClick={() => setFiltres({ prixMin: "", prixMax: "", types: [], equipements: [], animaux: false, instantanee: false })}
+                  onClick={() => { setZoneCarte(null); setFiltres({ prixMin: "", prixMax: "", types: [], equipements: [], animaux: false, instantanee: false }); }}
                   className="text-sm text-[#2F6E6E] hover:text-[#1B3A3A] font-medium mt-2"
                 >
-                  Réinitialiser les filtres
+                  Réinitialiser les filtres et la carte
                 </button>
               </div>
             ) : (
@@ -443,7 +438,6 @@ export default function PageRecherche() {
         </div>
       </div>
 
-      {/* Filtres en overlay sur mobile */}
       {filtresMobileOuverts && (
         <div className="fixed inset-0 bg-black/40 z-40 flex items-end md:hidden">
           <div className="bg-[#F8F4EC] w-full max-h-[85vh] overflow-y-auto rounded-t-2xl p-1">

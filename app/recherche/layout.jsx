@@ -1,3 +1,4 @@
+import "leaflet/dist/leaflet.css";
 import Link from "next/link";
 import { BadgeEuro, ShieldCheck } from "lucide-react";
 

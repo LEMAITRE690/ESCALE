@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { readFile } from 'node:fs/promises';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -10,6 +11,7 @@ if (process.env.ALLOW_DEMO_SEED !== 'true') {
   throw new Error('Refus de charger les données de démo sans ALLOW_DEMO_SEED=true.');
 }
 
+const demoListings = JSON.parse(await readFile(new URL('../lib/demo/listings.json', import.meta.url), 'utf8'));
 const supabase = createClient(url, serviceRole, { auth: { autoRefreshToken: false, persistSession: false } });
 const HOST_EMAIL = process.env.DEMO_HOST_EMAIL || 'demo.hote@escale.local';
 const GUESTS = [
@@ -38,21 +40,20 @@ const host = await ensureUser(HOST_EMAIL, 'Alexandre Démo', 'hote');
 const guests = [];
 for (const [email,name] of GUESTS) guests.push(await ensureUser(email,name));
 
-// Nettoyage du précédent jeu de démo de cet hôte uniquement.
 const { data: oldListings } = await supabase.from('listings').select('id').eq('host_id',host.id).like('title','[DEMO]%');
 const oldIds=(oldListings||[]).map(x=>x.id);
 if (oldIds.length) await supabase.from('listings').delete().in('id',oldIds);
 await supabase.from('host_expenses').delete().eq('host_id',host.id).eq('notes','ESCALE_DEMO');
 await supabase.from('crm_contacts').delete().eq('host_id',host.id).contains('tags',['DEMO']);
 
-const listingRows=[
- {host_id:host.id,title:'[DEMO] Villa des Embruns',type:'maison',description:'Villa lumineuse à deux pas de la mer.',guests:6,bedrooms:3,bathrooms:2,city:'La Rochelle',postal_code:'17000',price_per_night:245,cleaning_fee:85,status:'actif',children_welcome:true,instant_booking:true,photo_urls:[]},
- {host_id:host.id,title:'[DEMO] Loft Vieux-Port',type:'appartement',description:'Loft central pour courts séjours.',guests:4,bedrooms:2,bathrooms:1,city:'Marseille',postal_code:'13001',price_per_night:175,cleaning_fee:65,status:'actif',instant_booking:true,photo_urls:[]},
- {host_id:host.id,title:'[DEMO] Studio Bellecour',type:'studio',description:'Studio pratique au cœur de Lyon.',guests:2,bedrooms:1,bathrooms:1,city:'Lyon',postal_code:'69002',price_per_night:120,cleaning_fee:45,status:'actif',instant_booking:true,photo_urls:[]},
-];
-const {data:listings,error:listErr}=await supabase.from('listings').insert(listingRows).select();
+const {data:listings,error:listErr}=await supabase.from('listings').insert(
+  demoListings.map((listing)=>({ ...listing, host_id:host.id }))
+).select();
 if(listErr) throw listErr;
-const [villa,loft,studio]=listings;
+
+const villa=listings.find((l)=>l.title==='[DEMO] Villa des Embruns');
+const loft=listings.find((l)=>l.title==='[DEMO] Loft Vieux-Port');
+const studio=listings.find((l)=>l.title==='[DEMO] Appartement Bellecour');
 
 const reservations=[
  {listing_id:villa.id,guest_id:guests[0].id,guest_first_name:'Camille',start_date:iso(-120),end_date:iso(-113),guests:4,amount_total:196000,status:'terminee'},
@@ -89,6 +90,6 @@ await supabase.from('reservation_documents').insert(docs);
 
 console.log('\n✅ Démo ESCALE créée');
 console.log(`Hôte : ${HOST_EMAIL}`);
-console.log(`Mot de passe : valeur de DEMO_PASSWORD`);
+console.log('Mot de passe : valeur de DEMO_PASSWORD');
 console.log(`${listings.length} logements, ${resas.length} réservations, ${paymentRows.length} paiements et ${GUESTS.length} voyageurs.`);
-console.log('Ouvrir /hote/crm après connexion.\n');
+console.log('Ouvrir /recherche pour tester la carte puis /hote/crm après connexion.\n');
