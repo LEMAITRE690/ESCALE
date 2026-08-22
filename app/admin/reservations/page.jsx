@@ -1,0 +1,9 @@
+import { CalendarDays, Clock3, CheckCircle2, XCircle } from "lucide-react";
+const rows=[
+ ["#R-10482","Villa des Embruns","Camille M.","22–29 août","1 890 €","Confirmée"],
+ ["#R-10481","Maison du Cap","Thomas R.","23–27 août","1 420 €","En attente"],
+ ["#R-10477","Loft Vieux-Port","Nora P.","19–22 août","615 €","En cours"],
+ ["#R-10465","Chalet du Lac","Julie B.","14–18 août","1 160 €","Terminée"],
+ ["#R-10431","Studio Presqu’île","Marc L.","10–12 août","236 €","Annulée"],
+];
+export default function AdminReservations(){return <main className="p-5 md:p-8"><div className="mx-auto max-w-7xl"><p className="text-sm text-[#2F6E6E]">Opérations</p><h1 className="font-serif text-3xl">Réservations</h1><p className="mt-2 text-sm text-[#6B5B4D]">Suivi des séjours, annulations et interventions équipe.</p><div className="mt-6 grid gap-3 sm:grid-cols-4">{[["Aujourd’hui","42",CalendarDays],["En attente","9",Clock3],["Confirmées","214",CheckCircle2],["Annulations 30 j","18",XCircle]].map(([l,v,I])=><div key={l} className="rounded-xl border border-[#E4DCC8] bg-white p-5"><I size={17}/><div className="mt-2 text-2xl font-semibold">{v}</div><div className="text-sm text-[#8C7A66]">{l}</div></div>)}</div><section className="mt-6 overflow-hidden rounded-2xl border border-[#E4DCC8] bg-white"><div className="grid grid-cols-[.7fr_1.4fr_1fr_1fr_.8fr_.8fr] gap-3 border-b border-[#E4DCC8] bg-[#FFFDF8] px-5 py-3 text-xs text-[#8C7A66]"><span>ID</span><span>Logement</span><span>Voyageur</span><span>Dates</span><span>Montant</span><span>Statut</span></div>{rows.map(r=><div key={r[0]} className="grid grid-cols-[.7fr_1.4fr_1fr_1fr_.8fr_.8fr] gap-3 border-b border-[#EFE8DB] px-5 py-4 text-sm last:border-0">{r.map((v,i)=><span key={i} className={i===1?"font-medium":""}>{v}</span>)}</div>)}</section></div></main>}
